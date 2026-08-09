@@ -1,51 +1,36 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useState } from "react";
 
 type NavState = {
-  sidebarOpen: boolean; // desktop standalone sidebar
-  drawerOpen: boolean; // mobile/tablet slide-out drawer
-  toggle: () => void;
+  drawerOpen: boolean;
+  openDrawer: () => void;
   closeDrawer: () => void;
 };
 
 const NavContext = createContext<NavState>({
-  sidebarOpen: true,
   drawerOpen: false,
-  toggle: () => {},
+  openDrawer: () => {},
   closeDrawer: () => {},
 });
 
 export const useNav = () => useContext(NavContext);
 
 /**
- * Port of ForumMagnum's HideNavigationSidebarContext + NavigationDrawer
- * behavior: on desktop the hamburger toggles the pinned sidebar, on
- * smaller screens it opens a 280px drawer with a backdrop.
+ * Port of ForumMagnum's Header navigation state: the hamburger always opens
+ * the temporary NavigationDrawer (MUI Drawer slide-in); the pinned standalone
+ * sidebar on wide screens is independent and always visible.
  */
 export function NavProvider({ children }: { children: React.ReactNode }) {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
-
-  useEffect(() => {
-    const saved = localStorage.getItem("navSidebarOpen");
-    if (saved === "false") setSidebarOpen(false);
-  }, []);
-
-  const toggle = () => {
-    if (typeof window !== "undefined" && window.innerWidth >= 1280) {
-      setSidebarOpen((open) => {
-        localStorage.setItem("navSidebarOpen", String(!open));
-        return !open;
-      });
-    } else {
-      setDrawerOpen((open) => !open);
-    }
-  };
 
   return (
     <NavContext.Provider
-      value={{ sidebarOpen, drawerOpen, toggle, closeDrawer: () => setDrawerOpen(false) }}
+      value={{
+        drawerOpen,
+        openDrawer: () => setDrawerOpen(true),
+        closeDrawer: () => setDrawerOpen(false),
+      }}
     >
       {children}
     </NavContext.Provider>
@@ -53,11 +38,11 @@ export function NavProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function HamburgerButton() {
-  const { toggle } = useNav();
+  const { openDrawer } = useNav();
   return (
     <button
       aria-label="Menu"
-      onClick={toggle}
+      onClick={openDrawer}
       className="mr-2 flex h-12 w-12 cursor-pointer items-center justify-center rounded-full text-text hover:bg-black/5 dark:hover:bg-white/10"
     >
       <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
