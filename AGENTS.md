@@ -1,9 +1,79 @@
-<!-- BEGIN:nextjs-agent-rules -->
+# AGENTS.md — plrd-forum
 
-# This is NOT the Next.js you know
+Guidance for AI agents (and humans) working on this codebase.
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+## What this is
 
-This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+A faithful port of LessWrong's ([ForumMagnum](https://github.com/ForumMagnum/ForumMagnum)) visual design as a clean Next.js 16 + Tailwind 4 app. Auth is ATProto OAuth; the data layer is the [leaflet.pub](https://leaflet.pub) lexicons (`pub.leaflet.*`) — every post, comment, vote, and reaction is a record in the logged-in user's own PDS, aggregated into a local SQLite index via Jetstream.
 
-<!-- END:nextjs-agent-rules -->
+## Commands
+
+```bash
+npm run dev     # dev server on http://127.0.0.1:3457 (port matters for loopback OAuth)
+npm run build   # production build — run before committing
+npx tsc --noEmit
+```
+
+Seed content: `curl -X POST localhost:3457/api/backfill -H 'Content-Type: application/json' -d '{"actor":"awarm.space"}'`
+
+## The prime directive: style fidelity
+
+**Never eyeball LessWrong styles. Port them from ForumMagnum source.** Every CSS value in `src/app/globals.css` is annotated with the FM file it came from (`lesswrongTheme.ts`, `defaultPalette.ts`, `stylePiping.ts`, `LWPostsItem.tsx`, …). When adding UI:
+
+1. Find the corresponding component in ForumMagnum (`packages/lesswrong/components/...`) via raw.githubusercontent.com
+2. Port its JSS `defineStyles` values 1:1 (px values, colors, fonts)
+3. Annotate the CSS with the source file name
+
+Key theme facts:
+- Palette: bg `#f8f4ee`, green `#5f9b65`, links `#327E09`, greys = MUI grey scale
+- Fonts: UI = Calibri/Gill Sans stack @ 15.08px (`body2`); post body = warnock-pro serif 18.2/26px (`body1 + postStyle`); headers/wordmark = ETBookRoman (self-hosted from tufte-css CDN); warnock-pro/gill-sans-nova need `NEXT_PUBLIC_TYPEKIT_ID` (Adobe)
+- Dark mode = HSL-lightness inversion of the light palette (FM's `invertHexColor`), toggled via `.dark` on `<html>`
+- Posts list rows: white, `2px solid rgba(0,0,0,.05)` bottom border, 16.9px warnock titles, 14.3px grey-600 meta
+
+## Architecture map
+
+```
+src/lib/db/           SQLite (better-sqlite3 + Drizzle). DDL bootstraps in index.ts;
+                      migrations = try/catch ALTER TABLE statements there.
+src/lib/leaflet/      Lexicon types, block renderer (render.tsx), facet richtext,
+                      markdown→blocks for the editor
+src/lib/ingest/       indexRecord/deleteRecord + Jetstream listener (started by
+                      src/instrumentation.ts) + per-actor PDS backfill
+src/lib/auth/         NodeOAuthClient (loopback in dev, client-metadata.json in prod)
+                      + iron-session cookie holding the DID
+src/lib/queries.ts    All read queries (posts, comments tree, votes, tags, publications)
+src/lib/reactions.ts  LW's 89 named reacts, extracted from FM's reactions.tsx;
+                      icons in public/reactionImages/
+src/components/       Ports of FM components — names match FM (PostsItem≈LWPostsItem,
+                      Tooltip≈LWTooltip/PopperCard, ReactionsPalette, SelectionToolbar,
+                      NavSidebar≈TabNavigationMenu+NavigationDrawer)
+src/app/              Routes: / (frontpage), /allPosts (time blocks), /concepts (+/[tag]),
+                      /library (+/[did]/[rkey]), /posts/[did]/[rkey], /users/[actor],
+                      /new-post, /login, /oauth/*, /api/*
+```
+
+## Data model (leaflet lexicons)
+
+| Concept | Record | Notes |
+| --- | --- | --- |
+| Post | `pub.leaflet.document` | linearDocument pages of typed blocks |
+| Comment | `pub.leaflet.comment` | threaded via `reply.parent` |
+| Vote/karma | `pub.leaflet.interactions.recommend` | positive-only; karma = count |
+| Reaction | `pub.leaflet.comment` + `linearDocumentQuote` attachment | plaintext = react label (e.g. "Agreed"); UI maps label→icon via `reactionsByLabel` |
+| Publication | `pub.leaflet.publication` | the Library page; theme colors used on cards |
+| Tag | `document.tags[]` | the Concepts page |
+
+Quote anchors: the block renderer emits `data-block-idx` on each block; `SelectionToolbar` maps DOM selections to `{block: [i], offset}` positions so attachments are meaningful to other leaflet clients. The quoted text itself is kept in a local sidecar column (`comments.quoted_text`) since positions alone aren't renderable.
+
+## Gotchas
+
+- **`better-sqlite3` connection is cached on `globalThis`** — schema changes need a dev-server restart (hot reload keeps the old connection and skips new DDL).
+- **`allowedDevOrigins: ["127.0.0.1"]`** in next.config.ts is required; without it Next blocks its own JS chunks and nothing hydrates.
+- **OAuth in dev is a loopback client** (`http://localhost?redirect_uri=…`); `PUBLIC_URL` must match the URL you browse on (127.0.0.1:3457). In prod set `PUBLIC_URL=https://…` and metadata is served from `/client-metadata.json`.
+- **Vercel deploys are demo-grade**: set `DATABASE_PATH=/tmp/forum.db` — the filesystem is ephemeral, so the index resets between cold starts and Jetstream doesn't run persistently. A real deployment needs a persistent host (Fly/Railway/VPS) or swapping SQLite for a hosted DB.
+- The selection-toolbar palette's search input steals focus and collapses the browser selection — the toolbar snapshots the quote in state and guards `selectionchange` while the palette is open. Don't "simplify" that away.
+- react icons are black SVGs: dark mode and the dark toolbar invert them via CSS `filter: invert(1)`.
+
+## Testing changes
+
+`npm run build` must pass. For visual checks, seed with the backfill above and compare against lesswrong.com — the standard is "indistinguishable at a glance".
