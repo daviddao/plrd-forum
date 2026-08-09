@@ -81,7 +81,31 @@ export async function getFrontpagePosts(limit = 30): Promise<PostListItem[]> {
 
 export async function getPost(did: string, rkey: string) {
   const uri = `at://${did}/pub.leaflet.document/${rkey}`;
-  const row = db.select().from(tables.posts).where(eq(tables.posts.uri, uri)).get();
+  let row = db.select().from(tables.posts).where(eq(tables.posts.uri, uri)).get();
+
+  if (!row) {
+    // Ephemeral-index miss (fresh serverless instance): fetch the record
+    // straight from the author's PDS, index it, and backfill the rest of
+    // their repo in the background.
+    const { resolvePds } = await import("@/lib/atproto/resolve");
+    const { indexRecord } = await import("@/lib/ingest");
+    const { backfillActor } = await import("@/lib/ingest/backfill");
+    const pds = await resolvePds(did);
+    if (!pds) return null;
+    try {
+      const res = await fetch(
+        `${pds}/xrpc/com.atproto.repo.getRecord?repo=${encodeURIComponent(did)}&collection=pub.leaflet.document&rkey=${encodeURIComponent(rkey)}`,
+        { cache: "no-store" },
+      );
+      if (!res.ok) return null;
+      const data = (await res.json()) as { value: unknown };
+      indexRecord(did, "pub.leaflet.document", rkey, data.value);
+      void backfillActor(did).catch(() => {});
+      row = db.select().from(tables.posts).where(eq(tables.posts.uri, uri)).get();
+    } catch {
+      return null;
+    }
+  }
   if (!row) return null;
   const karma = db
     .select({ n: sql<number>`COUNT(*)` })
