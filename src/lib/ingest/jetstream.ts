@@ -1,12 +1,12 @@
 import WebSocket from "ws";
 import { db, tables } from "@/lib/db";
 import { indexRecord, deleteRecord } from "./index";
-import { DOCUMENT_NSID, COMMENT_NSID, RECOMMEND_NSID } from "@/lib/leaflet/types";
+import { DOCUMENT_NSID, COMMENT_NSID, RECOMMEND_NSID, PUBLICATION_NSID } from "@/lib/leaflet/types";
 
 const JETSTREAM_URL =
   process.env.JETSTREAM_URL ?? "wss://jetstream2.us-east.bsky.network/subscribe";
 
-const COLLECTIONS = [DOCUMENT_NSID, COMMENT_NSID, RECOMMEND_NSID];
+const COLLECTIONS = [DOCUMENT_NSID, COMMENT_NSID, RECOMMEND_NSID, PUBLICATION_NSID];
 
 type JetstreamEvent = {
   did: string;

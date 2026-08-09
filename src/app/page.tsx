@@ -9,7 +9,8 @@ export default async function HomePage() {
 
   return (
     <div>
-      <div className="section-title">
+      <div className="home-art" aria-hidden="true" />
+      <div className="section-title relative z-10">
         <h1>Latest Posts</h1>
         <Link
           href="/new-post"
@@ -19,6 +20,7 @@ export default async function HomePage() {
         </Link>
       </div>
 
+      <div className="relative z-10">
       {posts.length === 0 ? (
         <div className="bg-paper px-6 py-10 text-center" style={{ borderBottom: "2px solid var(--lw-item-separator)" }}>
           <p className="post-body mb-2">No posts have been indexed yet.</p>
@@ -35,6 +37,7 @@ export default async function HomePage() {
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }

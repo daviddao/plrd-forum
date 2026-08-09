@@ -1,8 +1,8 @@
 import { resolvePds } from "@/lib/atproto/resolve";
 import { indexRecord } from "./index";
-import { DOCUMENT_NSID, COMMENT_NSID, RECOMMEND_NSID } from "@/lib/leaflet/types";
+import { DOCUMENT_NSID, COMMENT_NSID, RECOMMEND_NSID, PUBLICATION_NSID } from "@/lib/leaflet/types";
 
-const COLLECTIONS = [DOCUMENT_NSID, COMMENT_NSID, RECOMMEND_NSID];
+const COLLECTIONS = [DOCUMENT_NSID, COMMENT_NSID, RECOMMEND_NSID, PUBLICATION_NSID];
 
 /** Fetch and index all pub.leaflet.* records from an actor's PDS. */
 export async function backfillActor(did: string): Promise<number> {

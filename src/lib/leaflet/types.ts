@@ -132,9 +132,26 @@ export type LeafletRecommend = {
   createdAt: string;
 };
 
+export type LeafletPublication = {
+  $type: "pub.leaflet.publication";
+  name: string;
+  description?: string;
+  base_path?: string;
+  icon?: BlobRef;
+  theme?: {
+    backgroundColor?: { $type?: string; hex?: string; [k: string]: unknown };
+    primary?: { $type?: string; hex?: string; [k: string]: unknown };
+    accentBackground?: { $type?: string; hex?: string; [k: string]: unknown };
+    accentText?: { $type?: string; hex?: string; [k: string]: unknown };
+    showPageBackground?: boolean;
+    [k: string]: unknown;
+  };
+};
+
 export const DOCUMENT_NSID = "pub.leaflet.document";
 export const COMMENT_NSID = "pub.leaflet.comment";
 export const RECOMMEND_NSID = "pub.leaflet.interactions.recommend";
+export const PUBLICATION_NSID = "pub.leaflet.publication";
 
 /** Rough word count across a document's text blocks. */
 export function documentWordCount(doc: LeafletDocument): number {

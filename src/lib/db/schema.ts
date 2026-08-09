@@ -48,6 +48,21 @@ export const votes = sqliteTable(
   (t) => [index("votes_subject_idx").on(t.subject), index("votes_did_idx").on(t.did)],
 );
 
+/** Indexed pub.leaflet.publication records */
+export const publications = sqliteTable(
+  "publications",
+  {
+    uri: text("uri").primaryKey(),
+    did: text("did").notNull(),
+    rkey: text("rkey").notNull(),
+    name: text("name").notNull(),
+    description: text("description"),
+    record: text("record", { mode: "json" }).notNull(),
+    indexedAt: text("indexed_at").notNull(),
+  },
+  (t) => [index("publications_did_idx").on(t.did)],
+);
+
 /** Cached actor profiles + PDS endpoints */
 export const profiles = sqliteTable("profiles", {
   did: text("did").primaryKey(),

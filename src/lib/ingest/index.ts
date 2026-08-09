@@ -4,10 +4,12 @@ import {
   DOCUMENT_NSID,
   COMMENT_NSID,
   RECOMMEND_NSID,
+  PUBLICATION_NSID,
   documentWordCount,
   type LeafletDocument,
   type LeafletComment,
   type LeafletRecommend,
+  type LeafletPublication,
 } from "@/lib/leaflet/types";
 
 /** Upsert a leaflet record into the index. Returns true if indexed. */
@@ -89,6 +91,32 @@ export function indexRecord(
     return true;
   }
 
+  if (collection === PUBLICATION_NSID) {
+    const p = record as LeafletPublication;
+    if (!p?.name) return false;
+    db.insert(tables.publications)
+      .values({
+        uri,
+        did,
+        rkey,
+        name: p.name,
+        description: p.description ?? null,
+        record: JSON.stringify(p),
+        indexedAt: now,
+      })
+      .onConflictDoUpdate({
+        target: tables.publications.uri,
+        set: {
+          name: p.name,
+          description: p.description ?? null,
+          record: JSON.stringify(p),
+          indexedAt: now,
+        },
+      })
+      .run();
+    return true;
+  }
+
   return false;
 }
 
@@ -100,5 +128,7 @@ export function deleteRecord(did: string, collection: string, rkey: string) {
     db.delete(tables.comments).where(eq(tables.comments.uri, uri)).run();
   } else if (collection === RECOMMEND_NSID) {
     db.delete(tables.votes).where(eq(tables.votes.uri, uri)).run();
+  } else if (collection === PUBLICATION_NSID) {
+    db.delete(tables.publications).where(eq(tables.publications.uri, uri)).run();
   }
 }

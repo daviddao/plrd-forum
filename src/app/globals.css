@@ -697,11 +697,111 @@ a.comment-username:hover { color: var(--lw-text-dim2); }
   color: var(--lw-grey-800);
 }
 .nav-item:hover { opacity: 0.6; }
-.nav-item svg {
-  width: 22px;
-  height: 22px;
-  color: var(--lw-grey-500);
+.nav-icon {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  color: var(--lw-grey-800);
+}
+.nav-icon svg {
+  width: 24px;
+  height: 24px;
+  fill: currentColor;
+}
+
+/* ============================================================
+   Frontpage background art (LW-style hero artwork, plresearch
+   imagery) — fixed top-right, fading into the cream background
+   ============================================================ */
+.home-art {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(52vw, 900px);
+  height: 100vh;
+  z-index: 0;
+  pointer-events: none;
+  background-image: url("/images/hero.webp");
+  background-repeat: no-repeat;
+  background-position: top right;
+  background-size: contain;
+  opacity: 0.9;
+  mask-image: linear-gradient(to left, black 40%, transparent 95%),
+    linear-gradient(to top, transparent 4%, black 45%);
+  mask-composite: intersect;
+  -webkit-mask-image: linear-gradient(to left, black 40%, transparent 95%),
+    linear-gradient(to top, transparent 4%, black 45%);
+  -webkit-mask-composite: source-in;
+}
+.dark .home-art {
+  background-image: url("/images/hero-dark.webp");
+  opacity: 0.55;
+}
+
+/* library / sequence-style cards */
+.library-card {
+  position: relative;
+  display: block;
+  height: 130px;
+  padding: 16px;
+  overflow: hidden;
+  border-radius: 2px;
+  box-shadow: var(--lw-sh-lw-card);
+  background: linear-gradient(135deg, var(--lw-tertiary) 0%, var(--lw-primary) 100%);
+}
+.library-card:hover {
+  box-shadow: var(--lw-sh-lw-hover), var(--lw-sh-lw-card);
+  opacity: 0.95;
+}
+.library-card .squiggle {
+  position: absolute;
+  inset: 0;
+  background-image: url("/images/squiggles.png");
+  background-size: 300px;
+  opacity: 0.25;
+  mix-blend-mode: soft-light;
+  pointer-events: none;
+}
+.library-card-title {
+  font-family: var(--lw-f-header);
+  font-size: 21px;
+  font-weight: 500;
+  color: #fff;
+  line-height: 1.2;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+.library-card-meta {
+  font-family: var(--lw-f-sans);
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* concepts (wikitags) list */
+.concept-item {
+  font-family: var(--lw-f-sans);
+  font-size: 14.95px;
+  line-height: 1.6;
+  color: var(--lw-text);
+  text-decoration: none;
+}
+.concept-item:hover {
+  color: var(--lw-link);
+}
+.concept-item .count {
+  color: var(--lw-text-dim4);
+  font-size: 12.5px;
+  margin-left: 4px;
+}
+.concept-letter {
+  font-family: var(--lw-f-header);
+  font-size: 20.8px;
+  color: var(--lw-grey-700);
+  margin-top: 12px;
+  margin-bottom: 4px;
 }
 .nav-sub-item {
   display: block;

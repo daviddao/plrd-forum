@@ -34,6 +34,12 @@ function createDb() {
     CREATE INDEX IF NOT EXISTS votes_subject_idx ON votes (subject);
     CREATE INDEX IF NOT EXISTS votes_did_idx ON votes (did);
 
+    CREATE TABLE IF NOT EXISTS publications (
+      uri TEXT PRIMARY KEY, did TEXT NOT NULL, rkey TEXT NOT NULL,
+      name TEXT NOT NULL, description TEXT, record TEXT NOT NULL, indexed_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS publications_did_idx ON publications (did);
+
     CREATE TABLE IF NOT EXISTS profiles (
       did TEXT PRIMARY KEY, handle TEXT, display_name TEXT, avatar TEXT, pds TEXT, fetched_at TEXT
     );

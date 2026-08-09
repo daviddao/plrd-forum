@@ -1,7 +1,7 @@
 import { db, tables } from "@/lib/db";
 import { desc, eq, sql, inArray } from "drizzle-orm";
 import { getProfiles, type ActorProfile } from "@/lib/atproto/resolve";
-import type { LeafletDocument } from "@/lib/leaflet/types";
+import type { LeafletDocument, LeafletPublication } from "@/lib/leaflet/types";
 
 export type PostListItem = {
   uri: string;
@@ -148,6 +148,112 @@ export function getMyVotes(did: string | null, subjects: string[]): Set<string> 
     .where(sql`${tables.votes.did} = ${did} AND ${inArray(tables.votes.subject, subjects)}`)
     .all();
   return new Set(rows.map((r) => r.subject));
+}
+
+/** All tags across indexed posts, with counts. */
+export function getAllTags(): { tag: string; count: number }[] {
+  const rows = db.select({ record: tables.posts.record }).from(tables.posts).all();
+  const counts = new Map<string, number>();
+  for (const row of rows) {
+    try {
+      const doc = JSON.parse(row.record as string) as LeafletDocument;
+      for (const raw of doc.tags ?? []) {
+        const tag = raw.trim();
+        if (!tag) continue;
+        counts.set(tag, (counts.get(tag) ?? 0) + 1);
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return [...counts.entries()]
+    .map(([tag, count]) => ({ tag, count }))
+    .sort((a, b) => a.tag.localeCompare(b.tag));
+}
+
+export async function getPostsByTag(tag: string): Promise<PostListItem[]> {
+  const all = await getFrontpagePosts(1000);
+  const target = tag.toLowerCase();
+  const uris = new Set(
+    db
+      .select({ uri: tables.posts.uri, record: tables.posts.record })
+      .from(tables.posts)
+      .all()
+      .filter((r) => {
+        try {
+          const doc = JSON.parse(r.record as string) as LeafletDocument;
+          return (doc.tags ?? []).some((t) => t.trim().toLowerCase() === target);
+        } catch {
+          return false;
+        }
+      })
+      .map((r) => r.uri),
+  );
+  return all.filter((p) => uris.has(p.uri));
+}
+
+export type PublicationListItem = {
+  uri: string;
+  did: string;
+  rkey: string;
+  name: string;
+  description: string | null;
+  postCount: number;
+  author: ActorProfile | null;
+  record: LeafletPublication;
+};
+
+/** Publications with post counts, for the Library page. */
+export async function getPublications(): Promise<PublicationListItem[]> {
+  const rows = db
+    .select({
+      uri: tables.publications.uri,
+      did: tables.publications.did,
+      rkey: tables.publications.rkey,
+      name: tables.publications.name,
+      description: tables.publications.description,
+      record: tables.publications.record,
+      postCount: sql<number>`(SELECT COUNT(*) FROM posts p WHERE p.publication = publications.uri)`,
+    })
+    .from(tables.publications)
+    .orderBy(desc(sql`(SELECT COUNT(*) FROM posts p WHERE p.publication = publications.uri)`))
+    .all();
+
+  const profiles = await getProfiles(rows.map((r) => r.did));
+  return rows.map((r) => ({
+    ...r,
+    record: JSON.parse(r.record as string) as LeafletPublication,
+    author: profiles.get(r.did) ?? null,
+  }));
+}
+
+export async function getPublication(did: string, rkey: string) {
+  const uri = `at://${did}/pub.leaflet.publication/${rkey}`;
+  const row = db
+    .select()
+    .from(tables.publications)
+    .where(eq(tables.publications.uri, uri))
+    .get();
+  if (!row) return null;
+
+  const memberUris = new Set(
+    db
+      .select({ uri: tables.posts.uri })
+      .from(tables.posts)
+      .where(eq(tables.posts.publication, uri))
+      .all()
+      .map((r) => r.uri),
+  );
+  const all = await getFrontpagePosts(1000);
+  const posts = all.filter((p) => memberUris.has(p.uri));
+
+  const profiles = await getProfiles([did]);
+  return {
+    ...row,
+    record: JSON.parse(row.record as string) as LeafletPublication,
+    author: profiles.get(did) ?? null,
+    posts,
+  };
 }
 
 export async function getUserContent(did: string) {
