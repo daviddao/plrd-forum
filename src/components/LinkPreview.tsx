@@ -6,37 +6,52 @@ import { PostPreview } from "./PostPreview";
 import type { PostListItem } from "@/lib/queries";
 
 /**
- * Port of ForumMagnum's link hover previews (HoverPreviewLink /
- * PostLinkPreview / DefaultPreview):
- *  - links that resolve to an indexed post — internal /posts/… links and
+ * Link hover previews for post/comment bodies:
+ *  - links resolving to an indexed post (internal /posts/… or
  *    standard.site publication permalinks like
- *    https://dholms.leaflet.pub/3mqtqvjidqs2p — get the full
- *    LWPostsPreviewTooltip card (same card as the posts-list hover)
- *  - every other link gets LW's DefaultPreview: the plain URL in the
- *    dark MuiTooltip bubble, so you always know where a link goes
+ *    https://dholms.leaflet.pub/3mnkrxp7rt22i) → the LWPostsPreviewTooltip
+ *    card, same as the posts-list hover
+ *  - any other http(s) link → a website preview card built from the
+ *    page's Open Graph metadata (image, title, description, domain)
+ *  - non-http links (mailto:, #fragment) → the URL in the dark tooltip
  *
- * Post data loads lazily when the card first opens, via /api/link-preview.
+ * All data loads lazily on first hover via /api/link-preview.
  */
 
-type PreviewState = PostListItem | "loading" | "none";
+type PostData = PostListItem & { kind: "post"; href: string };
+type WebsiteData = {
+  kind: "website";
+  url: string;
+  domain: string;
+  title: string | null;
+  description: string | null;
+  image: string | null;
+  siteName: string | null;
+};
+type PreviewData = PostData | WebsiteData;
+type PreviewState = PreviewData | "loading" | "none";
 
-const previewCache = new Map<string, PostListItem | null>();
+const previewCache = new Map<string, PreviewData | null>();
 
-/** Cheap syntactic check: could this link possibly be a post? */
-function isPostLinkCandidate(href: string): boolean {
-  if (/^\/posts\//.test(href)) return true;
-  try {
-    const u = new URL(href, "https://x.invalid");
-    if (/^\/posts\//.test(u.pathname)) return true;
-    // bare-TID path on some host — standard.site publication permalink shape
-    if (/^\/[a-z2-7]{13}\/?$/.test(u.pathname)) return true;
-  } catch {
-    // not a URL — plain fragment etc.
-  }
-  return false;
+function WebsitePreview({ site }: { site: WebsiteData }) {
+  return (
+    <div className="website-preview">
+      {site.image && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={site.image} alt="" className="website-preview-image" />
+      )}
+      <div className="website-preview-body">
+        <div className="website-preview-domain">{site.siteName ?? site.domain}</div>
+        {site.title && <div className="website-preview-title">{site.title}</div>}
+        {site.description && (
+          <div className="website-preview-desc">{site.description}</div>
+        )}
+      </div>
+    </div>
+  );
 }
 
-function PostCard({ href }: { href: string }) {
+function PreviewCard({ href }: { href: string }) {
   const cached = previewCache.get(href);
   const [state, setState] = useState<PreviewState>(
     cached ? cached : cached === null ? "none" : "loading",
@@ -47,7 +62,7 @@ function PostCard({ href }: { href: string }) {
     let cancelled = false;
     fetch(`/api/link-preview?url=${encodeURIComponent(href)}`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((d: PostListItem | null) => {
+      .then((d: PreviewData | null) => {
         if (cancelled) return;
         previewCache.set(href, d);
         setState(d ?? "none");
@@ -60,11 +75,10 @@ function PostCard({ href }: { href: string }) {
     };
   }, [href, state]);
 
-  if (state === "loading")
-    return <div className="user-tooltip-loading">Loading…</div>;
-  if (state === "none")
-    return <div className="user-tooltip-loading">{href}</div>;
-  return <PostPreview post={state} />;
+  if (state === "loading") return <div className="user-tooltip-loading">Loading…</div>;
+  if (state === "none") return <div className="user-tooltip-loading">{href}</div>;
+  if (state.kind === "post") return <PostPreview post={state} />;
+  return <WebsitePreview site={state} />;
 }
 
 export function LinkPreview({
@@ -80,19 +94,22 @@ export function LinkPreview({
     ? { target: "_blank" as const, rel: "noopener noreferrer" }
     : {};
 
-  if (isPostLinkCandidate(href)) {
+  const previewable = external || href.startsWith("/");
+  if (!previewable) {
     return (
-      <Tooltip title={<PostCard href={href} />} variant="card" delay={400} placement="bottom-start">
-        <a href={href} {...anchorProps}>
-          {children}
-        </a>
+      <Tooltip title={href} placement="bottom-start" delay={400}>
+        <a href={href}>{children}</a>
       </Tooltip>
     );
   }
 
-  // DefaultPreview: the URL in the standard dark tooltip
   return (
-    <Tooltip title={href} placement="bottom-start" delay={400}>
+    <Tooltip
+      title={<PreviewCard href={href} />}
+      variant="card"
+      delay={400}
+      placement="bottom-start"
+    >
       <a href={href} {...anchorProps}>
         {children}
       </a>

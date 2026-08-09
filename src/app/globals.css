@@ -2189,3 +2189,48 @@ input[type="text"], input[type="url"], textarea {
     display: none;
   }
 }
+
+/* ============================================================
+   Website hover preview card — OG metadata (LinkPreview.tsx)
+   ============================================================ */
+.website-preview {
+  width: 400px; /* matches LWPostsPreviewTooltip width */
+  max-width: 85vw;
+  overflow: hidden;
+}
+.website-preview-image {
+  display: block;
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  border-bottom: 1px solid var(--lw-border-faint);
+}
+.website-preview-body {
+  padding: 10px 14px 12px;
+}
+.website-preview-domain {
+  font-family: var(--lw-f-sans);
+  font-size: 11.375px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--lw-text-dim3);
+  margin-bottom: 3px;
+}
+.website-preview-title {
+  font-family: var(--lw-f-header); /* ETBook/warnock, like preview-title */
+  font-size: 16.9px;
+  line-height: 1.25;
+  color: var(--lw-text);
+  margin-bottom: 4px;
+}
+.website-preview-desc {
+  font-family: var(--lw-f-sans);
+  font-size: 14.3px;
+  line-height: 1.4;
+  color: var(--lw-text-dim2);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

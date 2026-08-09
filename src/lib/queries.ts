@@ -383,8 +383,8 @@ export async function findPostForLink(rawUrl: string): Promise<PostListItem | nu
     | { uri: string; did: string; rkey: string; title: string; publishedAt: string | null; wordCount: number; record: unknown }
     | undefined;
 
-  if (didAndRkey) {
-    row = db
+  const lookupByDidRkey = (did: string, rkey: string) =>
+    db
       .select({
         uri: tables.posts.uri,
         did: tables.posts.did,
@@ -395,10 +395,16 @@ export async function findPostForLink(rawUrl: string): Promise<PostListItem | nu
         record: tables.posts.record,
       })
       .from(tables.posts)
-      .where(
-        sql`${tables.posts.did} = ${didAndRkey.did} AND ${tables.posts.rkey} = ${didAndRkey.rkey}`,
-      )
+      .where(sql`${tables.posts.did} = ${did} AND ${tables.posts.rkey} = ${rkey}`)
       .get();
+
+  if (didAndRkey) {
+    row = lookupByDidRkey(didAndRkey.did, didAndRkey.rkey);
+    if (!row) {
+      // ephemeral-index miss — getPost has the PDS fetch + backfill fallback
+      await getPost(didAndRkey.did, didAndRkey.rkey);
+      row = lookupByDidRkey(didAndRkey.did, didAndRkey.rkey);
+    }
   } else if (pubHostRkey) {
     // publication whose base_path (stored in the record JSON) is this host.
     // The table is small — parse in JS rather than LIKE-matching the
@@ -415,22 +421,48 @@ export async function findPostForLink(rawUrl: string): Promise<PostListItem | nu
           return false;
         }
       });
-    if (!pub) return null;
-    row = db
-      .select({
-        uri: tables.posts.uri,
-        did: tables.posts.did,
-        rkey: tables.posts.rkey,
-        title: tables.posts.title,
-        publishedAt: tables.posts.publishedAt,
-        wordCount: tables.posts.wordCount,
-        record: tables.posts.record,
-      })
-      .from(tables.posts)
-      .where(
-        sql`${tables.posts.publication} = ${pub.uri} AND ${tables.posts.rkey} = ${pubHostRkey.rkey}`,
-      )
-      .get();
+    if (pub) {
+      row = db
+        .select({
+          uri: tables.posts.uri,
+          did: tables.posts.did,
+          rkey: tables.posts.rkey,
+          title: tables.posts.title,
+          publishedAt: tables.posts.publishedAt,
+          wordCount: tables.posts.wordCount,
+          record: tables.posts.record,
+        })
+        .from(tables.posts)
+        .where(
+          sql`${tables.posts.publication} = ${pub.uri} AND ${tables.posts.rkey} = ${pubHostRkey.rkey}`,
+        )
+        .get();
+    }
+    if (!row) {
+      // Publication unknown here (fresh instance) — the rendered page embeds
+      // its own at-uri; extract the document DID from it, then getPost.
+      try {
+        const res = await fetch(`https://${pubHostRkey.host}/${pubHostRkey.rkey}`, {
+          signal: AbortSignal.timeout(5000),
+          headers: { accept: "text/html" },
+          next: { revalidate: 3600 },
+        });
+        if (res.ok) {
+          const html = (await res.text()).slice(0, 500_000);
+          const m = html.match(
+            new RegExp(
+              `at://([^/"'\\\\]+)/site\\.standard\\.document/${pubHostRkey.rkey}`,
+            ),
+          );
+          if (m) {
+            await getPost(m[1], pubHostRkey.rkey);
+            row = lookupByDidRkey(m[1], pubHostRkey.rkey);
+          }
+        }
+      } catch {
+        // unreachable — treat as non-post link
+      }
+    }
   }
   if (!row) return null;
 
