@@ -1,5 +1,6 @@
 import WebSocket from "ws";
 import { db, tables } from "@/lib/db";
+import { eq } from "drizzle-orm";
 import { indexRecord, deleteRecord } from "./index";
 import {
   DOCUMENT_NSID,
@@ -21,6 +22,26 @@ const COLLECTIONS = [
   SITE_DOCUMENT_NSID,
   SITE_PUBLICATION_NSID,
 ];
+
+/**
+ * The site.standard.* firehose is dominated by RSS-bridge services
+ * (news mirrors, image boards, *.web.brid.gy) that mass-publish
+ * site.standard.document records. Gate those collections to actors the
+ * index already knows — anyone who has posted/commented/voted via the
+ * quiet pub.leaflet.* lexicons or was explicitly backfilled (profile
+ * visit, post visit, /api/backfill). The backfill paths call
+ * indexRecord directly, so new genuine authors still get in.
+ */
+const GATED_COLLECTIONS = new Set([SITE_DOCUMENT_NSID, SITE_PUBLICATION_NSID]);
+
+function isKnownActor(did: string): boolean {
+  return !!(
+    db.select({ did: tables.posts.did }).from(tables.posts).where(eq(tables.posts.did, did)).get() ??
+    db.select({ did: tables.comments.did }).from(tables.comments).where(eq(tables.comments.did, did)).get() ??
+    db.select({ did: tables.votes.did }).from(tables.votes).where(eq(tables.votes.did, did)).get() ??
+    db.select({ did: tables.publications.did }).from(tables.publications).where(eq(tables.publications.did, did)).get()
+  );
+}
 
 type JetstreamEvent = {
   did: string;
@@ -77,6 +98,7 @@ function connect() {
       if (operation === "delete") {
         deleteRecord(evt.did, collection, rkey);
       } else {
+        if (GATED_COLLECTIONS.has(collection) && !isKnownActor(evt.did)) return;
         indexRecord(evt.did, collection, rkey, record);
       }
 

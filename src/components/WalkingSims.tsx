@@ -4,12 +4,15 @@ import React, { useEffect, useRef } from "react";
 import type { LandingSim } from "@/lib/sims";
 
 /**
- * Real Simocracy sims walking along the bottom of the frontpage — randomly
- * picked from the Simocracy network, exactly like simocracy-v2's landing
- * page walkers. Rendering is a faithful port of simocracy-v2's
- * lib/sprites/avatar-renderer.ts (layer DRAW_ORDER, behind-body "$"
- * derivations, hair→hairhat auto-switch, color tinting), minus the atlas
- * fast path — layers load as individual PNGs proxied from simocracy.org.
+ * daviddao.org's researcher sims wandering around the frontpage — Einstein,
+ * Curie, Turing, Feynman & friends. Two sprite systems, both faithful ports
+ * from simocracy-v2:
+ *  - pipoya: layered PNG avatars (lib/sprites/avatar-renderer.ts — layer
+ *    DRAW_ORDER, behind-body "$" derivations, hair→hairhat, color tinting)
+ *  - codexPet: single 1536x1872 spritesheet, 8 cols x 9 rows of 192x208
+ *    cells with per-frame durations (lib/sprites/codex-pet.ts + the walking
+ *    behaviour from hooks/useLandingWalkingSims.ts: up reuses running-right,
+ *    down reuses running-left, pauses pick an expressive idle row)
  */
 
 const AVATAR_SIZE = 32; // drawn 1:1, same as the simocracy landing page
@@ -18,9 +21,51 @@ const FRAME_DELAY_MS = 180; // ~5.5 fps walk cycle
 const UPDATE_DELAY_MS = 80;
 const SPEED = 0.5;
 
-// direction → walk frame directories (DIRECTION_FRAME_SETS from simocracy)
-const FRAMES_RIGHT = [3, 7, 11, 7];
-const FRAMES_LEFT = [2, 6, 10, 6];
+// ---- codex-pet sheet contract (simocracy-v2 lib/sprites/codex-pet.ts) ------
+const PET_CELL_W = 192;
+const PET_CELL_H = 208;
+type PetState =
+  | "idle"
+  | "running-right"
+  | "running-left"
+  | "waving"
+  | "jumping"
+  | "waiting";
+// row index within the 8x9 atlas + hand-tuned per-frame durations (ms)
+const PET_ROWS: Record<PetState, { row: number; durations: number[] }> = {
+  idle:            { row: 0, durations: [280, 110, 110, 140, 140, 320] },
+  "running-right": { row: 1, durations: [120, 120, 120, 120, 120, 120, 120, 220] },
+  "running-left":  { row: 2, durations: [120, 120, 120, 120, 120, 120, 120, 220] },
+  waving:          { row: 3, durations: [140, 140, 140, 280] },
+  jumping:         { row: 4, durations: [140, 140, 140, 140, 280] },
+  waiting:         { row: 6, durations: [150, 150, 150, 150, 150, 260] },
+};
+// idle-break behaviours the landing rotates through (LANDING_PET_IDLE_STATES)
+const PET_IDLE_STATES: PetState[] = ["idle", "waving", "jumping", "waiting"];
+
+/** codex-pet sheets only have horizontal walk rows: up→right, down→left */
+function petStateForDirection(direction: number): PetState {
+  return direction === 0 || direction === 1 ? "running-right" : "running-left";
+}
+
+function drawPetFrame(
+  canvas: HTMLCanvasElement,
+  sheet: HTMLImageElement,
+  state: PetState,
+  frameIndex: number,
+): void {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  const { row, durations } = PET_ROWS[state];
+  const col = ((frameIndex % durations.length) + durations.length) % durations.length;
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(
+    sheet,
+    col * PET_CELL_W, row * PET_CELL_H, PET_CELL_W, PET_CELL_H,
+    0, 0, canvas.width, canvas.height,
+  );
+}
 
 // emotes atlas: 179 emotes, 3 frames each
 const EMOTE_COUNT = 179;
@@ -92,12 +137,13 @@ function getFramePath(basePath: string, frame: number): string {
   return basePath.replace(/\/pipoya-sprites\/([^/]+)\/\d+\//, `/pipoya-sprites/$1/${frame}/`);
 }
 
-/** faithful mini-port of renderAvatar (no atlas path) */
+/** faithful mini-port of renderAvatar (no atlas path) — pipoya sims only */
 async function renderSim(
   canvas: HTMLCanvasElement,
   sim: LandingSim,
   frame: number,
 ): Promise<void> {
+  if (sim.kind !== "pipoya") return;
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
   const { selectedOptions, partColorSettings } = sim.settings;
@@ -200,6 +246,12 @@ type SimState = {
   emoteId: number | null;
   emoteStartTime: number;
   nextEmoteTime: number;
+  // codex-pet state (kind === "codexPet" only)
+  isPet: boolean;
+  petSheet: HTMLImageElement | null;
+  petState: PetState;
+  petFrameIndex: number;
+  petFrameStart: number;
 };
 
 function pickTurn(nowMs: number): number {
@@ -237,16 +289,20 @@ export function WalkingSims({ sims }: { sims: LandingSim[] }) {
 
     const pad = AVATAR_SIZE / 2 + 6;
     const states: SimState[] = sims.map((sim, i) => {
+      const isPet = sim.kind === "codexPet";
       const offscreen = document.createElement("canvas");
-      offscreen.width = AVATAR_SIZE;
-      offscreen.height = AVATAR_SIZE;
+      // pets keep a 192x208 backing canvas so leg-motion pixel deltas
+      // survive the downscale (useLandingWalkingSims does the same)
+      offscreen.width = isPet ? PET_CELL_W : AVATAR_SIZE;
+      offscreen.height = isPet ? PET_CELL_H : AVATAR_SIZE;
       const direction = Math.floor(Math.random() * 4) as 0 | 1 | 2 | 3;
+      const paused = Math.random() < 0.3;
       const state: SimState = {
         sim,
         x: pad + Math.random() * (W - pad * 2),
         y: pad + 20 + Math.random() * (H - pad * 2 - 40),
         direction,
-        paused: Math.random() < 0.3,
+        paused,
         nextTurnTime: Date.now() + 1000 + Math.random() * 3000,
         offscreen,
         rendered: false,
@@ -254,12 +310,27 @@ export function WalkingSims({ sims }: { sims: LandingSim[] }) {
         emoteId: null,
         emoteStartTime: 0,
         nextEmoteTime: Date.now() + EMOTE_MIN_INTERVAL + i * 4000 + Math.random() * 3000,
+        isPet,
+        petSheet: null,
+        petState: paused ? "idle" : petStateForDirection(direction),
+        petFrameIndex: 0,
+        petFrameStart: performance.now(),
       };
-      const initialFrame = DIRECTION_FRAMES[direction][0];
-      renderSim(offscreen, sim, initialFrame).then(() => {
-        state.rendered = true;
-        state.lastFrame = initialFrame;
-      });
+      if (isPet && sim.kind === "codexPet") {
+        loadImage(sim.petSheetUrl).then((img) => {
+          if (!img) return; // sheet failed — sim just never renders
+          state.petSheet = img;
+          state.petFrameStart = performance.now();
+          drawPetFrame(state.offscreen, img, state.petState, 0);
+          state.rendered = true;
+        });
+      } else {
+        const initialFrame = DIRECTION_FRAMES[direction][0];
+        renderSim(offscreen, sim, initialFrame).then(() => {
+          state.rendered = true;
+          state.lastFrame = initialFrame;
+        });
+      }
       return state;
     });
 
@@ -283,6 +354,14 @@ export function WalkingSims({ sims }: { sims: LandingSim[] }) {
             s.paused = Math.random() < 0.25;
             s.direction = Math.floor(Math.random() * 4) as 0 | 1 | 2 | 3;
             s.nextTurnTime = pickTurn(nowMs);
+            if (s.isPet) {
+              // pausing pets pick an expressive idle row instead of freezing
+              s.petState = s.paused
+                ? PET_IDLE_STATES[Math.floor(Math.random() * PET_IDLE_STATES.length)]
+                : petStateForDirection(s.direction);
+              s.petFrameIndex = 0;
+              s.petFrameStart = performance.now();
+            }
           }
 
           if (!s.paused) {
@@ -291,27 +370,34 @@ export function WalkingSims({ sims }: { sims: LandingSim[] }) {
             s.y += dy * SPEED;
 
             // bounce at region edges: reverse direction
+            let bounced = false;
             if (s.x > W - pad) {
               s.x = W - pad;
               s.direction = 2;
-              s.nextTurnTime = pickTurn(nowMs);
+              bounced = true;
             } else if (s.x < pad) {
               s.x = pad;
               s.direction = 0;
-              s.nextTurnTime = pickTurn(nowMs);
+              bounced = true;
             }
             if (s.y > H - pad - 16) {
               s.y = H - pad - 16;
               s.direction = 1;
-              s.nextTurnTime = pickTurn(nowMs);
+              bounced = true;
             } else if (s.y < pad + EMOTE_DRAW_SIZE) {
               s.y = pad + EMOTE_DRAW_SIZE;
               s.direction = 3;
+              bounced = true;
+            }
+            if (bounced) {
               s.nextTurnTime = pickTurn(nowMs);
+              if (s.isPet) s.petState = petStateForDirection(s.direction);
             }
           }
 
-          // emotes
+          // emotes — codex pets skip them (their animation rows already
+          // convey mood; a bubble would clash, same call as simocracy)
+          if (s.isPet) continue;
           if (s.emoteId !== null) {
             if (nowMs - s.emoteStartTime > EMOTE_SHOW_DURATION) {
               s.emoteId = null;
@@ -334,14 +420,27 @@ export function WalkingSims({ sims }: { sims: LandingSim[] }) {
         // y-sort so lower sims draw in front
         const ordered = [...states].sort((a, b) => a.y - b.y);
         for (const s of ordered) {
-          const frames = DIRECTION_FRAMES[s.direction];
-          // paused sims hold the standing frame (index 1 of the set)
-          const frame = s.paused ? frames[1] : frames[sharedFrameIndex];
-          if (frame !== s.lastFrame) {
-            s.lastFrame = frame;
-            renderSim(s.offscreen, s.sim, frame).then(() => {
+          if (s.isPet) {
+            // advance the pet's frame on its row's own per-frame clock
+            if (s.petSheet) {
+              const { durations } = PET_ROWS[s.petState];
+              if (now - s.petFrameStart >= durations[s.petFrameIndex % durations.length]) {
+                s.petFrameIndex = (s.petFrameIndex + 1) % durations.length;
+                s.petFrameStart = now;
+              }
+              drawPetFrame(s.offscreen, s.petSheet, s.petState, s.petFrameIndex);
               s.rendered = true;
-            });
+            }
+          } else {
+            const frames = DIRECTION_FRAMES[s.direction];
+            // paused sims hold the standing frame (index 1 of the set)
+            const frame = s.paused ? frames[1] : frames[sharedFrameIndex];
+            if (frame !== s.lastFrame) {
+              s.lastFrame = frame;
+              renderSim(s.offscreen, s.sim, frame).then(() => {
+                s.rendered = true;
+              });
+            }
           }
           if (!s.rendered) continue;
 

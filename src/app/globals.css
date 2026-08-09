@@ -1776,3 +1776,186 @@ input[type="text"], input[type="url"], textarea {
   width: 260px;
   padding: 12px;
 }
+
+/* ============================================================
+   FloatingEinstein — feedback agent, bottom-right
+   (lean port of simocracy-v2 floating-einstein.tsx, LW palette)
+   ============================================================ */
+.einstein-button {
+  position: fixed;
+  right: 28px;
+  bottom: 28px;
+  width: 64px;
+  height: 69px; /* 192x208 codex-pet cell → 12:13 footprint */
+  z-index: 45; /* above content, below tooltips/modals */
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  user-select: none;
+}
+.einstein-sprite {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 2px 1px rgba(0, 0, 0, 0.18));
+}
+.einstein-sprite img,
+.einstein-sprite canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  object-fit: contain;
+  transition: opacity 240ms ease;
+}
+.einstein-bob {
+  animation: einstein-bob 3.6s ease-in-out infinite;
+}
+@keyframes einstein-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+.einstein-tag {
+  position: absolute;
+  bottom: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--lw-f-sans);
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--lw-text-dim3);
+  background: var(--lw-paper);
+  border: 1px solid var(--lw-border-faint);
+  border-radius: 2px;
+  padding: 1px 6px;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 150ms ease;
+  pointer-events: none;
+}
+.einstein-button:hover .einstein-tag,
+.einstein-button:focus-visible .einstein-tag {
+  opacity: 1;
+}
+
+/* speech-bubble panel — PopperCard-style paper */
+.einstein-panel {
+  position: fixed;
+  right: 28px;
+  bottom: 110px;
+  width: 300px;
+  z-index: 44;
+  background: var(--lw-paper);
+  border-radius: 3px;
+  box-shadow: var(--lw-sh-lw-card);
+  border: 1px solid var(--lw-border-faint);
+  display: flex;
+  flex-direction: column;
+}
+.einstein-panel-header {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid var(--lw-border-faint);
+}
+.einstein-panel-name {
+  font-family: var(--lw-f-header); /* ETBookRoman, like post titles */
+  font-size: 16.9px;
+  font-weight: 500;
+  color: var(--lw-text);
+}
+.einstein-panel-sub {
+  font-family: var(--lw-f-sans);
+  font-size: 11.375px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--lw-text-dim3);
+}
+.einstein-panel-close {
+  margin-left: auto;
+  align-self: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--lw-text-dim3);
+  padding: 2px 4px;
+  border-radius: 2px;
+}
+.einstein-panel-close:hover {
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--lw-text);
+}
+.dark .einstein-panel-close:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.einstein-panel-body {
+  padding: 10px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.einstein-greeting {
+  font-family: var(--lw-f-sans);
+  font-size: 14.3px;
+  line-height: 1.35;
+  color: var(--lw-text-dim2);
+  margin: 0;
+}
+.einstein-input {
+  font-family: var(--lw-f-sans);
+  font-size: 14.3px;
+  line-height: 1.4;
+  color: var(--lw-text);
+  background: var(--lw-bg);
+  border: 1px solid var(--lw-border);
+  border-radius: 2px;
+  padding: 7px 9px;
+  resize: vertical;
+  min-height: 72px;
+}
+.einstein-input:focus {
+  outline: none;
+  border-color: var(--lw-primary);
+}
+.einstein-send,
+.einstein-again {
+  font-family: var(--lw-f-sans);
+  font-size: 11.375px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+  padding: 8px 12px;
+  align-self: flex-end;
+}
+.einstein-send {
+  background: var(--lw-primary);
+  color: #fff;
+}
+.einstein-send:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.einstein-again {
+  background: none;
+  color: var(--lw-primary);
+}
+.einstein-again:hover,
+.einstein-send:not(:disabled):hover {
+  filter: brightness(1.06);
+}
+.einstein-error {
+  font-family: var(--lw-f-sans);
+  font-size: 12px;
+  color: var(--lw-error);
+  margin: 0;
+}

@@ -3,6 +3,7 @@ import "./globals.css";
 import { Header } from "@/components/Header";
 import { NavSidebar, NavBalance } from "@/components/NavSidebar";
 import { NavProvider } from "@/components/nav-context";
+import { FloatingEinstein } from "@/components/FloatingEinstein";
 
 const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME ?? "PLRD Forum";
 
@@ -45,6 +46,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {/* balance the sidebar so the column stays centered, like LW */}
             <NavBalance />
           </div>
+          <FloatingEinstein />
         </NavProvider>
       </body>
     </html>

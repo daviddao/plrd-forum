@@ -47,6 +47,11 @@ function createDb() {
     CREATE TABLE IF NOT EXISTS auth_state (key TEXT PRIMARY KEY, data TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS auth_session (key TEXT PRIMARY KEY, data TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS ingest_cursor (id INTEGER PRIMARY KEY, time_us INTEGER NOT NULL);
+
+    CREATE TABLE IF NOT EXISTS feedback (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      did TEXT, text TEXT NOT NULL, path TEXT, created_at TEXT NOT NULL
+    );
   `);
   // lightweight migrations for existing databases
   for (const stmt of [

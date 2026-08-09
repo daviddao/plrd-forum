@@ -87,6 +87,15 @@ export const authSession = sqliteTable("auth_session", {
   data: text("data").notNull(),
 });
 
+/** Feedback left via the floating Einstein widget */
+export const feedback = sqliteTable("feedback", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  did: text("did"),
+  text: text("text").notNull(),
+  path: text("path"),
+  createdAt: text("created_at").notNull(),
+});
+
 /** Jetstream cursor */
 export const ingestCursor = sqliteTable("ingest_cursor", {
   id: integer("id").primaryKey(),
