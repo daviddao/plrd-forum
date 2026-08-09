@@ -9,6 +9,7 @@ import type {
   ListItem,
 } from "./types";
 import { RichText } from "./richtext";
+import { headingAnchor } from "./toc";
 import { blobUrl } from "@/lib/atproto/resolve";
 
 type Ctx = { did: string; pds: string | null };
@@ -19,15 +20,25 @@ type Ctx = { did: string; pds: string | null };
  */
 export function DocumentBody({ doc, did, pds }: { doc: LeafletDocument; did: string; pds: string | null }) {
   const ctx: Ctx = { did, pds };
+  // LW-style anchors on heading blocks so the ToC (and #hash links) can
+  // target them — same slug scheme as extractToC in toc.ts
+  const seenAnchors = new Set<string>();
   return (
-    <div className="post-body">
+    <div className="post-body" id="postBody">
       {(doc.pages ?? []).map((page, i) => (
         <React.Fragment key={page.id ?? i}>
-          {(page.blocks ?? []).map((b, j) => (
-            <div key={j} data-block-idx={j} data-page-idx={i}>
-              <Block entry={b} ctx={ctx} />
-            </div>
-          ))}
+          {(page.blocks ?? []).map((b, j) => {
+            const block = b.block as { $type?: string; plaintext?: string };
+            const anchor =
+              block?.$type === "pub.leaflet.blocks.header" && block.plaintext?.trim()
+                ? headingAnchor(block.plaintext, seenAnchors)
+                : undefined;
+            return (
+              <div key={j} data-block-idx={j} data-page-idx={i} id={anchor}>
+                <Block entry={b} ctx={ctx} />
+              </div>
+            );
+          })}
         </React.Fragment>
       ))}
     </div>

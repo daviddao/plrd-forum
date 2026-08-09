@@ -4,6 +4,9 @@ import type { Metadata } from "next";
 import { getPost, getCommentTree, getMyVotes, getVoteCount } from "@/lib/queries";
 import { getSessionDid } from "@/lib/auth/session";
 import { DocumentBody } from "@/lib/leaflet/render";
+import { extractToC } from "@/lib/leaflet/toc";
+import { TableOfContents } from "@/components/TableOfContents";
+import { UserTooltip } from "@/components/UserTooltip";
 import { Vote } from "@/components/Vote";
 import { CommentItem } from "@/components/CommentItem";
 import { CommentForm } from "@/components/CommentForm";
@@ -62,20 +65,26 @@ export default async function PostPage({ params }: { params: Promise<Params> }) 
   const myVotes = getMyVotes(sessionDid, [post.uri, ...allCommentUris]);
   const commentCount = allCommentUris.length;
 
+  const tocSections = extractToC(post.record);
+
   return (
     <div className="mx-auto max-w-[682px] pt-8">
+      {/* left rail — FM FixedPositionToC (nav sidebar is hidden on post pages) */}
+      <TableOfContents sections={tocSections} title={post.title} />
       <article>
         {/* Title — LWPostsPageHeader: ETBook serif */}
         <h1 className="post-page-title">{post.title}</h1>
 
         {/* byline */}
         <div className="mb-8 flex flex-wrap items-center gap-x-4 gap-y-1 text-[14.3px] text-text-dim3">
-          <Link
-            href={`/users/${post.author?.handle ?? did}`}
-            className="font-medium text-text-dim3 no-underline hover:text-text"
-          >
-            {authorName(post.author, did)}
-          </Link>
+          <UserTooltip did={did} name={authorName(post.author, did)}>
+            <Link
+              href={`/users/${post.author?.handle ?? did}`}
+              className="font-medium text-text-dim3 no-underline hover:text-text"
+            >
+              {authorName(post.author, did)}
+            </Link>
+          </UserTooltip>
           <span title={post.publishedAt ?? ""}>{fullDate(post.publishedAt)}</span>
           <span>{readingTime(post.wordCount)}</span>
           {mentionCount > 0 && (

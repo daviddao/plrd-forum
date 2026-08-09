@@ -76,6 +76,14 @@ from the owner's PDS blobs; Einstein's sheet is bundled in `public/codex-pets/`.
 Rendering is ported from simocracy-v2 (`lib/sprites/codex-pet.ts`,
 `hooks/useLandingWalkingSims.ts`).
 
+Post pages hide the nav sidebar; the left rail is `TableOfContents` — a port of
+FM's `FixedPositionToC` (dots + 1px reading-progress bar always visible, labels
+fade in on rail hover, rows flex-scaled to section heights, viewport-center
+scroll highlight). Heading anchors use LW's underscore scheme (`headingAnchor`
+in `src/lib/leaflet/toc.ts`, ids emitted by the block renderer). Author names
+get `UserTooltip` (port of `LWUserTooltipContent`/`UserMetaInfo`), lazy-loaded
+via `/api/author-card` on first hover.
+
 Quote anchors: the block renderer emits `data-block-idx` on each block; `SelectionToolbar` maps DOM selections to `{block: [i], offset}` positions so attachments are meaningful to other leaflet clients. The quoted text itself is kept in a local sidecar column (`comments.quoted_text`) since positions alone aren't renderable.
 
 ## Gotchas

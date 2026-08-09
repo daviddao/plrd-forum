@@ -26,12 +26,19 @@ export function NavSidebar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
+  // LW post pages surrender the left rail to the FixedPositionToC — the
+  // nav is only reachable via the hamburger drawer there (FM PostsPage
+  // renders MultiToCLayout instead of TabNavigationMenu's standalone column)
+  const onPostPage = pathname?.startsWith("/posts/");
+
   return (
     <>
-      {/* pinned standalone sidebar (wide screens) */}
-      <nav className="sticky top-16 hidden max-h-[calc(100vh-64px)] w-[210px] shrink-0 flex-col self-start overflow-y-auto pt-8 pl-4 xl:flex">
-        <NavContent />
-      </nav>
+      {/* pinned standalone sidebar (wide screens, not on post pages) */}
+      {!onPostPage && (
+        <nav className="sticky top-16 hidden max-h-[calc(100vh-64px)] w-[210px] shrink-0 flex-col self-start overflow-y-auto pt-8 pl-4 xl:flex">
+          <NavContent />
+        </nav>
+      )}
 
       <Drawer open={drawerOpen} onClose={closeDrawer}>
         <NavContent onNavigate={closeDrawer} />
@@ -100,6 +107,8 @@ function Drawer({
 
 /** Right-side spacer matching the pinned sidebar width, keeps the column centered. */
 export function NavBalance() {
+  const pathname = usePathname();
+  if (pathname?.startsWith("/posts/")) return null; // ToC replaces the rail
   return <div className="hidden w-[210px] shrink-0 xl:block" />;
 }
 

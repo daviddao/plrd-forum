@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { PostListItem } from "@/lib/queries";
 import { timeAgo, fullDateTime, authorName, readingTime } from "@/lib/format";
 import { Tooltip } from "./Tooltip";
+import { UserTooltip } from "./UserTooltip";
 
 /**
  * Port of ForumMagnum's LWPostsItem: continuous white rows with 2px hairline
@@ -36,13 +37,15 @@ export function PostsItem({ post, showAuthor = true }: { post: PostListItem; sho
         <span className="posts-item-spacer" />
 
         {showAuthor && (
-          <Link
-            href={userHref}
-            className="posts-item-meta mr-3 max-w-[180px]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {authorName(post.author, post.did)}
-          </Link>
+          <UserTooltip did={post.did} name={authorName(post.author, post.did)}>
+            <Link
+              href={userHref}
+              className="posts-item-meta mr-3 max-w-[180px]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {authorName(post.author, post.did)}
+            </Link>
+          </UserTooltip>
         )}
 
         <Tooltip title={fullDateTime(post.publishedAt)} placement="bottom">
