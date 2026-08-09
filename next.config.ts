@@ -8,6 +8,17 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "**" },
     ],
   },
+  async rewrites() {
+    return [
+      // Pipoya sprite layers are served from simocracy.org (full set: all
+      // character sets × 12 animation frames × all part folders, ~60MB)
+      // instead of vendoring them into this repo.
+      {
+        source: "/pipoya-sprites/:path*",
+        destination: "https://www.simocracy.org/pipoya-sprites/:path*",
+      },
+    ];
+  },
 };
 
 export default nextConfig;

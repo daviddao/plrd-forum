@@ -892,6 +892,63 @@ a.comment-username:hover { color: var(--lw-text-dim2); }
   background: var(--lw-grey-50);
 }
 
+/* ============================================================
+   User profile — UsersProfile.tsx
+   ============================================================ */
+/* usernameTitle: display3 + headerStyle */
+.profile-username {
+  font-family: var(--lw-f-header);
+  font-size: 39px;
+  font-weight: 400;
+  color: var(--lw-grey-800);
+  letter-spacing: -0.02em;
+  line-height: 1.30357em;
+  margin-left: -0.02em;
+  margin-top: 0;
+}
+
+/* userInfo: body2, lwTertiary color, • bullet separators */
+.profile-userinfo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  color: #69886e; /* lwTertiary.main */
+  margin-top: 8px;
+  font-family: var(--lw-f-sans);
+  font-size: 15.08px;
+}
+.dark .profile-userinfo {
+  color: #77967c;
+}
+.profile-userinfo > *:not(:last-child)::after {
+  content: "•";
+  margin-left: 16px;
+  margin-right: 16px;
+}
+.profile-userinfo > * {
+  margin-bottom: 8px;
+}
+
+.profile-meta {
+  display: inline-flex;
+  align-items: center;
+}
+.profile-meta-item {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 16px;
+  cursor: default;
+}
+.profile-meta-item:last-child {
+  margin-right: 0;
+}
+.profile-meta-item svg {
+  width: 18px;
+  height: 18px;
+  color: var(--lw-text-dim);
+  margin-right: 4px;
+}
+
 /* All Posts — PostsTimeBlock.timeBlockTitle: serif, sticky */
 .time-block-title {
   font-family: var(--lw-f-serif);

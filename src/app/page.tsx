@@ -1,20 +1,20 @@
 import Link from "next/link";
 import { getFrontpagePosts } from "@/lib/queries";
+import { getLandingSims } from "@/lib/sims";
 import { PostsItem } from "@/components/PostsItem";
 import { WalkingSims } from "@/components/WalkingSims";
-import { authorName } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const posts = await getFrontpagePosts(50);
-
-  // unique authors walk along the bottom of the page as pixel sims
-  const walkers = [...new Set(posts.map((p) => authorName(p.author, p.did)))];
+  const [posts, sims] = await Promise.all([
+    getFrontpagePosts(50),
+    getLandingSims(7),
+  ]);
 
   return (
     <div>
-      <WalkingSims names={walkers} />
+      <WalkingSims sims={sims} />
       <div className="section-title relative z-10">
         <h1>Latest Posts</h1>
         <Link

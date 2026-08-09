@@ -42,7 +42,7 @@ function createDb() {
     CREATE INDEX IF NOT EXISTS publications_did_idx ON publications (did);
 
     CREATE TABLE IF NOT EXISTS profiles (
-      did TEXT PRIMARY KEY, handle TEXT, display_name TEXT, avatar TEXT, pds TEXT, fetched_at TEXT
+      did TEXT PRIMARY KEY, handle TEXT, display_name TEXT, avatar TEXT, description TEXT, pds TEXT, fetched_at TEXT
     );
     CREATE TABLE IF NOT EXISTS auth_state (key TEXT PRIMARY KEY, data TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS auth_session (key TEXT PRIMARY KEY, data TEXT NOT NULL);
@@ -52,6 +52,7 @@ function createDb() {
   for (const stmt of [
     "ALTER TABLE comments ADD COLUMN quoted_text TEXT",
     "ALTER TABLE comments ADD COLUMN attachment TEXT",
+    "ALTER TABLE profiles ADD COLUMN description TEXT",
   ]) {
     try {
       sqlite.exec(stmt);

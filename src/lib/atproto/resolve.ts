@@ -10,6 +10,7 @@ export type ActorProfile = {
   handle: string | null;
   displayName: string | null;
   avatar: string | null;
+  description: string | null;
   pds: string | null;
 };
 
@@ -76,7 +77,7 @@ export async function getProfile(did: string): Promise<ActorProfile | null> {
       next: { revalidate: 300 },
     })
       .then((r) => (r.ok ? r.json() : null))
-      .catch(() => null) as Promise<{ handle?: string; displayName?: string; avatar?: string } | null>,
+      .catch(() => null) as Promise<{ handle?: string; displayName?: string; avatar?: string; description?: string } | null>,
   ]);
 
   const profile: ActorProfile = {
@@ -84,6 +85,7 @@ export async function getProfile(did: string): Promise<ActorProfile | null> {
     handle: (bsky?.handle ?? didDoc.handle)?.toLowerCase() ?? null,
     displayName: bsky?.displayName ?? null,
     avatar: bsky?.avatar ?? null,
+    description: bsky?.description ?? null,
     pds: didDoc.pds,
   };
 

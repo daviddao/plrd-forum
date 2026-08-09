@@ -1,106 +1,75 @@
 "use client";
 
 import React, { useEffect, useRef } from "react";
+import type { LandingSim } from "@/lib/sims";
 
 /**
- * Randomly composed pixel sims (Pipoya sprites from simocracy-v2) walking
- * along the bottom of the frontpage — replaces the static background art.
- * Each sim's look is seeded from its name (forum authors), so the same
- * author always walks by with the same face.
- *
- * Ported/simplified from simocracy-v2's components/landing/hero.tsx
- * useWalkingSims hook, compositing layer PNGs directly:
- *   /pipoya-sprites/adult/{frame}/{partFolder}/{id}.png
+ * Real Simocracy sims walking along the bottom of the frontpage — randomly
+ * picked from the Simocracy network, exactly like simocracy-v2's landing
+ * page walkers. Rendering is a faithful port of simocracy-v2's
+ * lib/sprites/avatar-renderer.ts (layer DRAW_ORDER, behind-body "$"
+ * derivations, hair→hairhat auto-switch, color tinting), minus the atlas
+ * fast path — layers load as individual PNGs proxied from simocracy.org.
  */
 
-const AVATAR_SIZE = 32;
-const DRAW_SCALE = 1.6;
-const LOGICAL_HEIGHT = 72;
+const AVATAR_SIZE = 32; // drawn 1:1, same as the simocracy landing page
+const LOGICAL_HEIGHT = 64;
 const FRAME_DELAY_MS = 180; // ~5.5 fps walk cycle
-const UPDATE_DELAY_MS = 80; // position update rate
-const SPEED = 0.5; // px per update tick
+const UPDATE_DELAY_MS = 80;
+const SPEED = 0.5;
 
-// direction → [walk frames] (frame = sprite directory number)
+// direction → walk frame directories (DIRECTION_FRAME_SETS from simocracy)
 const FRAMES_RIGHT = [3, 7, 11, 7];
 const FRAMES_LEFT = [2, 6, 10, 6];
 
-// emotes atlas (simocracy-v2 emotes-atlas.png): 179 emotes, 3 frames each
+// emotes atlas: 179 emotes, 3 frames each
 const EMOTE_COUNT = 179;
 const EMOTE_FRAME_SIZE = 32;
 const EMOTE_FRAMES_PER = 3;
 const EMOTE_COLS = 10;
 const EMOTE_SHOW_DURATION = 2500;
-const EMOTE_MIN_INTERVAL = 9000;
-const EMOTE_MAX_INTERVAL = 22000;
-const EMOTE_DRAW_SIZE = 22;
+const EMOTE_MIN_INTERVAL = 10000;
+const EMOTE_MAX_INTERVAL = 25000;
+const EMOTE_DRAW_SIZE = 20;
 
-// available sprite variants (from simocracy-v2's CHARACTER_SET_SPRITE_IDS.adult)
-const SKIN_IDS = range(1, 33);
-const CLOTHES_IDS = [...range(1, 9), ...range(13, 24), ...range(32, 61), 69, 70];
-const EYE_IDS = range(1, 35);
-const HAIR_IDS = range(1, 68);
-const HAT_IDS = range(1, 26);
-const GLASSES_IDS = range(1, 10);
-const BEARD_IDS = range(1, 8);
+// ---- ports of simocracy-v2 lib/sprites/types.ts ----------------------------
 
-function range(a: number, b: number): number[] {
-  return Array.from({ length: b - a + 1 }, (_, i) => a + i);
-}
-
-/** deterministic PRNG seeded from a string (author name) */
-function seededRandom(seed: string): () => number {
-  let h = 2166136261;
-  for (let i = 0; i < seed.length; i++) {
-    h ^= seed.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return () => {
-    h = Math.imul(h ^ (h >>> 15), h | 1);
-    h ^= h + Math.imul(h ^ (h >>> 7), h | 61);
-    return ((h ^ (h >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-type SimLook = {
-  // layer id per part, null = not worn; drawn in this order
-  hairBehind: number | null; // 03Hair$ (behind body), same id as hair when present
-  skin: number;
-  eyes: number;
-  clothes: number;
-  beard: number | null;
-  glasses: number | null;
-  hair: number;
-  hat: number | null;
+const PART_FOLDER: Record<string, string> = {
+  skin: "00Skin",
+  clothes: "01Costume",
+  eyes: "02Eye",
+  hair: "03Hair",
+  "hair$": "03Hair$",
+  "hairhat$": "03HairHat$",
+  hairadd: "04HairAdd",
+  "hairadd$": "04HairAdd$",
+  hat: "05Hat",
+  "hat$": "05Hat$",
+  glasses: "06Glasses",
+  cloak: "07Cloak",
+  "cloak$": "07Cloak$",
+  makeup: "08Makeup",
+  beard: "09Beard",
+  ear: "10Ear",
+  "ear$": "10Ear$",
+  tail: "11Tail",
+  "tail$": "11Tail$",
+  item: "12Item",
+  "item$": "12Item$",
+};
+const HAIRHAT_FOLDER = "03HairHat";
+const BEHIND_BODY_PARTS = ["hair$", "hairhat$", "hairadd$", "hat$", "cloak$", "ear$", "tail$", "item$"];
+const DRAW_ORDER = [
+  "item$", "hat$", "hairadd$", "ear$", "hairhat$", "hair$", "cloak$", "tail$",
+  "skin",
+  "makeup", "eyes", "clothes", "tail", "cloak", "beard", "glasses", "hair", "ear", "hairadd", "hat", "item",
+];
+const PART_COLOR_OPACITY: Record<string, number> = {
+  skin: 0.1, clothes: 0.4, eyes: 0.2, hair: 0.7, hairadd: 0.7, hat: 0.3,
+  glasses: 0.5, cloak: 0.4, makeup: 0.3, beard: 0.7, ear: 0.3, tail: 0.4, item: 0.3,
 };
 
-function randomLook(rand: () => number): SimLook {
-  const pick = <T,>(arr: T[]): T => arr[Math.floor(rand() * arr.length)];
-  const hair = pick(HAIR_IDS);
-  return {
-    hairBehind: hair,
-    skin: pick(SKIN_IDS),
-    eyes: pick(EYE_IDS),
-    clothes: pick(CLOTHES_IDS),
-    beard: rand() < 0.18 ? pick(BEARD_IDS) : null,
-    glasses: rand() < 0.22 ? pick(GLASSES_IDS) : null,
-    hair,
-    hat: rand() < 0.3 ? pick(HAT_IDS) : null,
-  };
-}
-
-/** layer → (folder, id) pairs in draw order for a given look */
-function layersFor(look: SimLook): { folder: string; id: number }[] {
-  const layers: { folder: string; id: number }[] = [];
-  if (look.hairBehind !== null) layers.push({ folder: "03Hair$", id: look.hairBehind });
-  layers.push({ folder: "00Skin", id: look.skin });
-  layers.push({ folder: "02Eye", id: look.eyes });
-  layers.push({ folder: "01Costume", id: look.clothes });
-  if (look.beard !== null) layers.push({ folder: "09Beard", id: look.beard });
-  if (look.glasses !== null) layers.push({ folder: "06Glasses", id: look.glasses });
-  layers.push({ folder: "03Hair", id: look.hair });
-  if (look.hat !== null) layers.push({ folder: "05Hat", id: look.hat });
-  return layers;
-}
+// ---- image loading with negative caching -----------------------------------
 
 const imageCache = new Map<string, Promise<HTMLImageElement | null>>();
 
@@ -118,29 +87,95 @@ function loadImage(src: string): Promise<HTMLImageElement | null> {
   return cached;
 }
 
-async function renderSimFrame(
+/** swap the frame directory in a pipoya path (avatar-renderer's getFramePath) */
+function getFramePath(basePath: string, frame: number): string {
+  return basePath.replace(/\/pipoya-sprites\/([^/]+)\/\d+\//, `/pipoya-sprites/$1/${frame}/`);
+}
+
+/** faithful mini-port of renderAvatar (no atlas path) */
+async function renderSim(
   canvas: HTMLCanvasElement,
-  look: SimLook,
+  sim: LandingSim,
   frame: number,
 ): Promise<void> {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
-  const images = await Promise.all(
-    layersFor(look).map(({ folder, id }) =>
-      loadImage(`/pipoya-sprites/adult/${frame}/${folder}/${id}.png`),
-    ),
-  );
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  for (const img of images) {
-    if (img) ctx.drawImage(img, 0, 0, AVATAR_SIZE, AVATAR_SIZE);
+  const { selectedOptions, partColorSettings } = sim.settings;
+  const hatSelected = !!selectedOptions["hat"];
+  const w = canvas.width;
+  const h = canvas.height;
+
+  // resolve layer paths in draw order
+  const layers: { path: string; colorPart: string }[] = [];
+  for (const part of DRAW_ORDER) {
+    const isBehind = BEHIND_BODY_PARTS.includes(part);
+    let basePath: string | undefined;
+    let colorPart = part;
+
+    if (isBehind) {
+      const behindFolder = PART_FOLDER[part];
+      if (part === "hairhat$") {
+        const hatPath = selectedOptions["hat"];
+        if (!hatPath) continue;
+        basePath = hatPath.replace(`/${PART_FOLDER.hat}/`, `/${behindFolder}/`);
+        colorPart = "hair";
+      } else {
+        const frontPart = part.slice(0, -1);
+        const frontPath = selectedOptions[frontPart];
+        if (!frontPath) continue;
+        basePath = frontPath.replace(`/${PART_FOLDER[frontPart]}/`, `/${behindFolder}/`);
+        colorPart = frontPart;
+      }
+    } else {
+      const rawPath = selectedOptions[part];
+      if (!rawPath) continue;
+      basePath =
+        part === "hair" && hatSelected
+          ? rawPath.replace(`/${PART_FOLDER.hair}/`, `/${HAIRHAT_FOLDER}/`)
+          : rawPath;
+    }
+    layers.push({ path: getFramePath(basePath, frame), colorPart });
+  }
+
+  const images = await Promise.all(layers.map((l) => loadImage(l.path)));
+
+  ctx.clearRect(0, 0, w, h);
+  ctx.imageSmoothingEnabled = false;
+  for (let i = 0; i < layers.length; i++) {
+    const img = images[i];
+    if (!img) continue; // missing behind-body variants etc. — same as FM's existence map
+    const { colorPart } = layers[i];
+    const color = partColorSettings?.[colorPart];
+    const needsTint = !!(color && color.alpha > 0);
+
+    if (!needsTint) {
+      ctx.drawImage(img, 0, 0, w, h);
+      continue;
+    }
+    // tint on an isolated canvas (applyColorFilter port), then composite
+    const tint = document.createElement("canvas");
+    tint.width = w;
+    tint.height = h;
+    const tctx = tint.getContext("2d");
+    if (!tctx) continue;
+    tctx.imageSmoothingEnabled = false;
+    tctx.drawImage(img, 0, 0, w, h);
+    const opacity = color.alpha * (PART_COLOR_OPACITY[colorPart] ?? 0.5);
+    if (opacity > 0) {
+      tctx.globalCompositeOperation = "source-atop";
+      tctx.fillStyle = `rgba(${color.red}, ${color.green}, ${color.blue}, ${opacity})`;
+      tctx.fillRect(0, 0, w, h);
+    }
+    ctx.drawImage(tint, 0, 0);
   }
 }
 
+// ---- walking loop (port of simocracy-v2 hero.tsx useWalkingSims) ------------
+
 type SimState = {
-  name: string;
-  look: SimLook;
+  sim: LandingSim;
   x: number;
-  direction: 0 | 2; // 0=right, 2=left
+  direction: 0 | 2;
   offscreen: HTMLCanvasElement;
   rendered: boolean;
   lastFrame: number;
@@ -149,10 +184,11 @@ type SimState = {
   nextEmoteTime: number;
 };
 
-export function WalkingSims({ names }: { names: string[] }) {
+export function WalkingSims({ sims }: { sims: LandingSim[] }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
+    if (sims.length === 0) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const container = canvas.parentElement;
@@ -177,27 +213,24 @@ export function WalkingSims({ names }: { names: string[] }) {
     let emotesAtlas: HTMLImageElement | null = null;
     loadImage("/emotes-atlas.png").then((img) => (emotesAtlas = img));
 
-    const simNames = names.length > 0 ? names.slice(0, 7) : ["wanderer"];
-    const sims: SimState[] = simNames.map((name, i) => {
-      const rand = seededRandom(name);
+    const states: SimState[] = sims.map((sim, i) => {
       const offscreen = document.createElement("canvas");
       offscreen.width = AVATAR_SIZE;
       offscreen.height = AVATAR_SIZE;
-      const direction = (rand() < 0.5 ? 0 : 2) as 0 | 2;
+      const direction = (Math.random() < 0.5 ? 0 : 2) as 0 | 2;
       const state: SimState = {
-        name,
-        look: randomLook(rand),
-        x: ((i + 0.5 + rand() * 0.6) / simNames.length) * widthRef,
+        sim,
+        x: ((i + 0.5) / sims.length) * widthRef + (Math.random() - 0.5) * 40,
         direction,
         offscreen,
         rendered: false,
         lastFrame: -1,
         emoteId: null,
         emoteStartTime: 0,
-        nextEmoteTime: Date.now() + 4000 + i * 3500 + rand() * 4000,
+        nextEmoteTime: Date.now() + EMOTE_MIN_INTERVAL + i * 4000 + Math.random() * 3000,
       };
       const initialFrame = (direction === 0 ? FRAMES_RIGHT : FRAMES_LEFT)[0];
-      renderSimFrame(offscreen, state.look, initialFrame).then(() => {
+      renderSim(offscreen, sim, initialFrame).then(() => {
         state.rendered = true;
         state.lastFrame = initialFrame;
       });
@@ -215,29 +248,28 @@ export function WalkingSims({ names }: { names: string[] }) {
       rafId = requestAnimationFrame(animate);
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
-      const drawSize = AVATAR_SIZE * DRAW_SCALE;
-      const pad = drawSize / 2 + 4;
+      const pad = AVATAR_SIZE / 2 + 4;
 
       if (now - lastUpdateTime >= UPDATE_DELAY_MS) {
         const nowMs = Date.now();
-        for (const sim of sims) {
-          sim.x += sim.direction === 0 ? SPEED : -SPEED;
-          if (sim.x > widthRef - pad) {
-            sim.x = widthRef - pad;
-            sim.direction = 2;
-          } else if (sim.x < pad) {
-            sim.x = pad;
-            sim.direction = 0;
+        for (const s of states) {
+          s.x += s.direction === 0 ? SPEED : -SPEED;
+          if (s.x > widthRef - pad) {
+            s.x = widthRef - pad;
+            s.direction = 2;
+          } else if (s.x < pad) {
+            s.x = pad;
+            s.direction = 0;
           }
-          if (sim.emoteId !== null) {
-            if (nowMs - sim.emoteStartTime > EMOTE_SHOW_DURATION) {
-              sim.emoteId = null;
-              sim.nextEmoteTime =
+          if (s.emoteId !== null) {
+            if (nowMs - s.emoteStartTime > EMOTE_SHOW_DURATION) {
+              s.emoteId = null;
+              s.nextEmoteTime =
                 nowMs + EMOTE_MIN_INTERVAL + Math.random() * (EMOTE_MAX_INTERVAL - EMOTE_MIN_INTERVAL);
             }
-          } else if (nowMs > sim.nextEmoteTime) {
-            sim.emoteId = Math.floor(Math.random() * EMOTE_COUNT);
-            sim.emoteStartTime = nowMs;
+          } else if (nowMs > s.nextEmoteTime) {
+            s.emoteId = Math.floor(Math.random() * EMOTE_COUNT);
+            s.emoteStartTime = nowMs;
           }
         }
         lastUpdateTime = now;
@@ -248,49 +280,55 @@ export function WalkingSims({ names }: { names: string[] }) {
         ctx.clearRect(0, 0, widthRef, LOGICAL_HEIGHT);
         ctx.imageSmoothingEnabled = false;
 
-        for (const sim of sims) {
-          const frames = sim.direction === 0 ? FRAMES_RIGHT : FRAMES_LEFT;
+        for (const s of states) {
+          const frames = s.direction === 0 ? FRAMES_RIGHT : FRAMES_LEFT;
           const frame = frames[sharedFrameIndex];
-          if (frame !== sim.lastFrame) {
-            sim.lastFrame = frame;
-            renderSimFrame(sim.offscreen, sim.look, frame).then(() => {
-              sim.rendered = true;
+          if (frame !== s.lastFrame) {
+            s.lastFrame = frame;
+            renderSim(s.offscreen, s.sim, frame).then(() => {
+              s.rendered = true;
             });
           }
-          if (!sim.rendered) continue;
+          if (!s.rendered) continue;
 
-          const y = LOGICAL_HEIGHT - drawSize / 2 - 14;
-          ctx.drawImage(sim.offscreen, sim.x - drawSize / 2, y - drawSize / 2, drawSize, drawSize);
+          const y = LOGICAL_HEIGHT - AVATAR_SIZE / 2 - 13;
+          ctx.drawImage(
+            s.offscreen,
+            s.x - AVATAR_SIZE / 2,
+            y - AVATAR_SIZE / 2,
+            AVATAR_SIZE,
+            AVATAR_SIZE,
+          );
 
-          // emote bubble
-          if (sim.emoteId !== null && emotesAtlas) {
-            const elapsed = now - sim.emoteStartTime;
+          if (s.emoteId !== null && emotesAtlas) {
+            const elapsed = now - s.emoteStartTime;
             const emoteFrame =
               elapsed < EMOTE_SHOW_DURATION * 0.2 ? 0 : elapsed < EMOTE_SHOW_DURATION * 0.8 ? 1 : 2;
             const srcX =
-              (sim.emoteId % EMOTE_COLS) * (EMOTE_FRAME_SIZE * EMOTE_FRAMES_PER) +
+              (s.emoteId % EMOTE_COLS) * (EMOTE_FRAME_SIZE * EMOTE_FRAMES_PER) +
               emoteFrame * EMOTE_FRAME_SIZE;
-            const srcY = Math.floor(sim.emoteId / EMOTE_COLS) * EMOTE_FRAME_SIZE;
+            const srcY = Math.floor(s.emoteId / EMOTE_COLS) * EMOTE_FRAME_SIZE;
             ctx.drawImage(
               emotesAtlas,
               srcX, srcY, EMOTE_FRAME_SIZE, EMOTE_FRAME_SIZE,
-              sim.x - EMOTE_DRAW_SIZE / 2,
-              y - drawSize / 2 - EMOTE_DRAW_SIZE - 2,
+              s.x - EMOTE_DRAW_SIZE / 2,
+              y - AVATAR_SIZE / 2 - EMOTE_DRAW_SIZE - 2,
               EMOTE_DRAW_SIZE, EMOTE_DRAW_SIZE,
             );
           }
 
-          // name label
+          // name label (simocracy hero style)
           ctx.imageSmoothingEnabled = true;
           ctx.save();
-          ctx.font = "9px Calibri, 'Gill Sans', Tahoma, sans-serif";
+          ctx.font = "bold 9px sans-serif";
           ctx.textAlign = "center";
-          const labelY = y + drawSize / 2 + 2;
+          const label = s.sim.name;
+          const labelW = ctx.measureText(label).width + 8;
+          const labelY = y + AVATAR_SIZE / 2 + 2;
           ctx.fillStyle = "rgba(0,0,0,0.45)";
-          const labelW = ctx.measureText(sim.name).width + 8;
-          ctx.fillRect(sim.x - labelW / 2, labelY, labelW, 12);
+          ctx.fillRect(s.x - labelW / 2, labelY, labelW, 13);
           ctx.fillStyle = "#fff";
-          ctx.fillText(sim.name, sim.x, labelY + 9);
+          ctx.fillText(label, s.x, labelY + 10);
           ctx.restore();
           ctx.imageSmoothingEnabled = false;
         }
@@ -304,7 +342,9 @@ export function WalkingSims({ names }: { names: string[] }) {
       cancelAnimationFrame(rafId);
       ro.disconnect();
     };
-  }, [names]);
+  }, [sims]);
+
+  if (sims.length === 0) return null;
 
   return (
     <div className="pointer-events-none fixed right-0 bottom-0 left-0 z-0" aria-hidden="true">

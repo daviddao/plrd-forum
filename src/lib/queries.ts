@@ -277,13 +277,45 @@ export async function getUserContent(did: string) {
     .all()
     .map(({ record, ...r }) => ({ ...r, excerpt: recordExcerpt(record) }));
 
+  // recent comments with their post titles + karma, LW RecentComments-style
   const comments = db
-    .select()
+    .select({
+      uri: tables.comments.uri,
+      did: tables.comments.did,
+      subject: tables.comments.subject,
+      plaintext: tables.comments.plaintext,
+      facets: tables.comments.facets,
+      quotedText: tables.comments.quotedText,
+      createdAt: tables.comments.createdAt,
+      karma: sql<number>`(SELECT COUNT(*) FROM votes v WHERE v.subject = comments.uri)`,
+      postTitle: sql<string | null>`(SELECT title FROM posts p WHERE p.uri = comments.subject)`,
+    })
     .from(tables.comments)
     .where(eq(tables.comments.did, did))
     .orderBy(desc(tables.comments.createdAt))
-    .limit(50)
+    .limit(20)
     .all();
+
+  // publications by this user (→ LW "Sequences" section)
+  const pubRows = db
+    .select({
+      uri: tables.publications.uri,
+      did: tables.publications.did,
+      rkey: tables.publications.rkey,
+      name: tables.publications.name,
+      description: tables.publications.description,
+      record: tables.publications.record,
+      postCount: sql<number>`(SELECT COUNT(*) FROM posts p WHERE p.publication = publications.uri)`,
+    })
+    .from(tables.publications)
+    .where(eq(tables.publications.did, did))
+    .all();
+  const profiles = await getProfiles([did]);
+  const publications: PublicationListItem[] = pubRows.map((r) => ({
+    ...r,
+    record: JSON.parse(r.record as string) as LeafletPublication,
+    author: profiles.get(did) ?? null,
+  }));
 
   const karmaRow = db.get<{ n: number }>(sql`
     SELECT COUNT(*) as n FROM votes v
@@ -291,5 +323,5 @@ export async function getUserContent(did: string) {
        OR v.subject IN (SELECT uri FROM comments WHERE did = ${did})
   `);
 
-  return { posts, comments, karma: karmaRow?.n ?? 0 };
+  return { posts, comments, publications, karma: karmaRow?.n ?? 0 };
 }

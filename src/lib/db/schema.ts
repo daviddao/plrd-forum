@@ -71,6 +71,7 @@ export const profiles = sqliteTable("profiles", {
   handle: text("handle"),
   displayName: text("display_name"),
   avatar: text("avatar"),
+  description: text("description"),
   pds: text("pds"),
   fetchedAt: text("fetched_at"),
 });
