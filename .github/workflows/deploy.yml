@@ -1,0 +1,31 @@
+# Deploy to Vercel on push to main.
+#
+# The Vercel project (team "protocol") isn't linked via the Vercel GitHub App
+# (the app isn't installed on the protocol GitHub org), so this workflow does
+# the deploy with the Vercel CLI instead. Secrets: VERCEL_TOKEN, VERCEL_ORG_ID,
+# VERCEL_PROJECT_ID. If the GitHub App is installed later, this file can be
+# deleted in favor of the native integration.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: vercel-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Deploy to Vercel (production)
+        run: npx vercel@latest deploy --prod --yes --token=${{ secrets.VERCEL_TOKEN }}
