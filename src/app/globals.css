@@ -712,34 +712,6 @@ a.comment-username:hover { color: var(--lw-text-dim2); }
   fill: currentColor;
 }
 
-/* ============================================================
-   Frontpage background art (LW-style hero artwork, plresearch
-   imagery) — fixed top-right, fading into the cream background
-   ============================================================ */
-.home-art {
-  position: fixed;
-  top: 0;
-  right: 0;
-  width: min(52vw, 900px);
-  height: 100vh;
-  z-index: 0;
-  pointer-events: none;
-  background-image: url("/images/hero.webp");
-  background-repeat: no-repeat;
-  background-position: top right;
-  background-size: contain;
-  opacity: 0.9;
-  mask-image: linear-gradient(to left, black 40%, transparent 95%),
-    linear-gradient(to top, transparent 4%, black 45%);
-  mask-composite: intersect;
-  -webkit-mask-image: linear-gradient(to left, black 40%, transparent 95%),
-    linear-gradient(to top, transparent 4%, black 45%);
-  -webkit-mask-composite: source-in;
-}
-.dark .home-art {
-  background-image: url("/images/hero-dark.webp");
-  opacity: 0.55;
-}
 
 /* library / sequence-style cards */
 .library-card {
