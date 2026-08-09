@@ -45,13 +45,13 @@ export default async function UserPage({ params }: { params: Promise<Params> }) 
   const did = await resolveHandleToDid(actor);
   if (!did) notFound();
   const profile = await getProfile(did);
-  let content = await getUserContent(did);
-  if (content.posts.length === 0 && content.comments.length === 0) {
-    // ephemeral-index miss: pull the actor's leaflet records from their PDS
-    const { backfillActor } = await import("@/lib/ingest/backfill");
-    await backfillActor(did).catch(() => {});
-    content = await getUserContent(did);
-  }
+  // Pull the actor's leaflet + site.standard records from their PDS (at most
+  // once per TTL window). A plain "only when empty" check would strand users
+  // whose index is partial — e.g. one record arrived via Jetstream while the
+  // rest of the repo (or a newly-supported collection) was never fetched.
+  const { backfillActorOnce } = await import("@/lib/ingest/backfill");
+  await backfillActorOnce(did);
+  const content = await getUserContent(did);
   const { posts, comments, publications, karma } = content;
 
   const name = authorName(profile, did);

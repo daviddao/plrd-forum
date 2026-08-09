@@ -1,6 +1,6 @@
 # PLRD Forum
 
-A faithful port of [LessWrong](https://www.lesswrong.com)'s ([ForumMagnum](https://github.com/ForumMagnum/ForumMagnum)) visual design as a clean **Next.js 16 + Tailwind 4** app, with **ATProto OAuth** for auth and **[leaflet.pub](https://leaflet.pub) lexicons** (`pub.leaflet.*`) as the data layer.
+A faithful port of [LessWrong](https://www.lesswrong.com)'s ([ForumMagnum](https://github.com/ForumMagnum/ForumMagnum)) visual design as a clean **Next.js 16 + Tailwind 4** app, with **ATProto OAuth** for auth and the **[standard.site](https://standard.site) lexicons** (`site.standard.*`, as published by [leaflet.pub](https://leaflet.pub)) as the data layer — legacy `pub.leaflet.*` records are indexed too.
 
 ## What's exact about the style
 
@@ -15,15 +15,16 @@ Every value is ported from ForumMagnum source, not eyeballed:
 - Tooltips: MuiTooltip-style bubbles + the LW hover-preview card (`LWPostsPreviewTooltip`, 400px, excerpt fade)
 - Dark mode: ForumMagnum's HSL-lightness inversion
 
-## Data model (leaflet.pub lexicons)
+## Data model (standard.site lexicons)
 
 | Forum concept | Lexicon |
 | --- | --- |
-| Post | `pub.leaflet.document` (linearDocument pages/blocks) |
+| Post | `site.standard.document` (linearDocument pages/blocks in `content`; legacy `pub.leaflet.document` still indexed) |
+| Publication | `site.standard.publication` (legacy `pub.leaflet.publication` still indexed) |
 | Comment | `pub.leaflet.comment` (threaded via `reply.parent`) |
 | Upvote/karma | `pub.leaflet.interactions.recommend` |
 
-All writes go to the logged-in user's own PDS. A SQLite index (Drizzle) aggregates the network via a **Jetstream** listener (`src/lib/ingest/jetstream.ts`, started by `instrumentation.ts`) plus on-demand backfill (`POST /api/backfill {"actor":"handle"}`).
+Leaflet migrated documents/publications to `site.standard.*` keeping the same rkeys; both shapes are normalized at ingest and the `site.standard` record supersedes its legacy twin. All writes go to the logged-in user's own PDS. A SQLite index (Drizzle) aggregates the network via a **Jetstream** listener (`src/lib/ingest/jetstream.ts`, started by `instrumentation.ts`) plus on-demand backfill (`POST /api/backfill {"actor":"handle"}`).
 
 ## Run
 

@@ -1,7 +1,14 @@
 import { db, tables } from "@/lib/db";
 import { desc, eq, sql, inArray } from "drizzle-orm";
 import { getProfiles, type ActorProfile } from "@/lib/atproto/resolve";
-import type { LeafletDocument, LeafletPublication } from "@/lib/leaflet/types";
+import {
+  DOCUMENT_NSID,
+  PUBLICATION_NSID,
+  SITE_DOCUMENT_NSID,
+  SITE_PUBLICATION_NSID,
+  type LeafletDocument,
+  type LeafletPublication,
+} from "@/lib/leaflet/types";
 
 export type PostListItem = {
   uri: string;
@@ -80,8 +87,14 @@ export async function getFrontpagePosts(limit = 30): Promise<PostListItem[]> {
 }
 
 export async function getPost(did: string, rkey: string) {
-  const uri = `at://${did}/pub.leaflet.document/${rkey}`;
-  let row = db.select().from(tables.posts).where(eq(tables.posts.uri, uri)).get();
+  // a /posts/[did]/[rkey] URL doesn't carry the collection — the post may be
+  // a legacy pub.leaflet.document or a migrated site.standard.document
+  const candidateUris = [SITE_DOCUMENT_NSID, DOCUMENT_NSID].map(
+    (c) => `at://${did}/${c}/${rkey}`,
+  );
+  const lookup = () =>
+    db.select().from(tables.posts).where(inArray(tables.posts.uri, candidateUris)).get();
+  let row = lookup();
 
   if (!row) {
     // Ephemeral-index miss (fresh serverless instance): fetch the record
@@ -92,25 +105,28 @@ export async function getPost(did: string, rkey: string) {
     const { backfillActor } = await import("@/lib/ingest/backfill");
     const pds = await resolvePds(did);
     if (!pds) return null;
-    try {
-      const res = await fetch(
-        `${pds}/xrpc/com.atproto.repo.getRecord?repo=${encodeURIComponent(did)}&collection=pub.leaflet.document&rkey=${encodeURIComponent(rkey)}`,
-        { cache: "no-store" },
-      );
-      if (!res.ok) return null;
-      const data = (await res.json()) as { value: unknown };
-      indexRecord(did, "pub.leaflet.document", rkey, data.value);
-      void backfillActor(did).catch(() => {});
-      row = db.select().from(tables.posts).where(eq(tables.posts.uri, uri)).get();
-    } catch {
-      return null;
+    for (const collection of [SITE_DOCUMENT_NSID, DOCUMENT_NSID]) {
+      try {
+        const res = await fetch(
+          `${pds}/xrpc/com.atproto.repo.getRecord?repo=${encodeURIComponent(did)}&collection=${collection}&rkey=${encodeURIComponent(rkey)}`,
+          { cache: "no-store" },
+        );
+        if (!res.ok) continue;
+        const data = (await res.json()) as { value: unknown };
+        indexRecord(did, collection, rkey, data.value);
+        void backfillActor(did).catch(() => {});
+        row = lookup();
+        if (row) break;
+      } catch {
+        // try the next collection
+      }
     }
   }
   if (!row) return null;
   const karma = db
     .select({ n: sql<number>`COUNT(*)` })
     .from(tables.votes)
-    .where(eq(tables.votes.subject, uri))
+    .where(eq(tables.votes.subject, row.uri))
     .get();
   const profiles = await getProfiles([did]);
   return {
@@ -304,11 +320,13 @@ export async function getPublications(): Promise<PublicationListItem[]> {
 }
 
 export async function getPublication(did: string, rkey: string) {
-  const uri = `at://${did}/pub.leaflet.publication/${rkey}`;
+  const candidateUris = [SITE_PUBLICATION_NSID, PUBLICATION_NSID].map(
+    (c) => `at://${did}/${c}/${rkey}`,
+  );
   const row = db
     .select()
     .from(tables.publications)
-    .where(eq(tables.publications.uri, uri))
+    .where(inArray(tables.publications.uri, candidateUris))
     .get();
   if (!row) return null;
 
@@ -316,7 +334,7 @@ export async function getPublication(did: string, rkey: string) {
     db
       .select({ uri: tables.posts.uri })
       .from(tables.posts)
-      .where(eq(tables.posts.publication, uri))
+      .where(eq(tables.posts.publication, row.uri))
       .all()
       .map((r) => r.uri),
   );

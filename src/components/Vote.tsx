@@ -62,7 +62,7 @@ export function Vote({
         </button>
       </Tooltip>
       <Tooltip
-        title={`This ${subject.includes("/pub.leaflet.document/") ? "post" : "comment"} has ${state.karma} ${state.karma === 1 ? "recommend" : "recommends"}`}
+        title={`This ${/\/(pub\.leaflet|site\.standard)\.document\//.test(subject) ? "post" : "comment"} has ${state.karma} ${state.karma === 1 ? "recommend" : "recommends"}`}
         placement="bottom"
       >
         <span

@@ -106,15 +106,30 @@ export type LinearDocumentPage = {
 };
 
 export type LeafletDocument = {
-  $type: "pub.leaflet.document";
+  $type: string; // "pub.leaflet.document" or "site.standard.document" (normalized)
   title: string;
   description?: string;
-  author: string;
+  author?: string;
   publishedAt?: string;
   publication?: string;
   tags?: string[];
   coverImage?: BlobRef;
   pages: LinearDocumentPage[];
+};
+
+/** site.standard.document — leaflet's successor lexicon. `content` wraps the
+ * same linearDocument pages; `site` replaces `publication`. */
+export type StandardDocument = {
+  $type: "site.standard.document";
+  title: string;
+  site: string; // at-uri of a site.standard.publication
+  publishedAt: string;
+  description?: string;
+  path?: string;
+  tags?: string[];
+  coverImage?: BlobRef;
+  content?: { $type: "pub.leaflet.content"; pages: LinearDocumentPage[] };
+  textContent?: string;
 };
 
 export type QuotePosition = { block: number[]; offset: number };
@@ -141,19 +156,36 @@ export type LeafletRecommend = {
   createdAt: string;
 };
 
+export type ThemeColor = { $type?: string; hex?: string; [k: string]: unknown };
+
 export type LeafletPublication = {
-  $type: "pub.leaflet.publication";
+  $type: string; // "pub.leaflet.publication" or "site.standard.publication" (normalized)
   name: string;
   description?: string;
   base_path?: string;
   icon?: BlobRef;
   theme?: {
-    backgroundColor?: { $type?: string; hex?: string; [k: string]: unknown };
-    primary?: { $type?: string; hex?: string; [k: string]: unknown };
-    accentBackground?: { $type?: string; hex?: string; [k: string]: unknown };
-    accentText?: { $type?: string; hex?: string; [k: string]: unknown };
+    backgroundColor?: ThemeColor;
+    primary?: ThemeColor;
+    accentBackground?: ThemeColor;
+    accentText?: ThemeColor;
     showPageBackground?: boolean;
     [k: string]: unknown;
+  };
+};
+
+export type StandardPublication = {
+  $type: "site.standard.publication";
+  name: string;
+  url?: string;
+  description?: string;
+  icon?: BlobRef;
+  theme?: LeafletPublication["theme"];
+  basicTheme?: {
+    accent?: ThemeColor;
+    background?: ThemeColor;
+    foreground?: ThemeColor;
+    accentForeground?: ThemeColor;
   };
 };
 
@@ -161,6 +193,61 @@ export const DOCUMENT_NSID = "pub.leaflet.document";
 export const COMMENT_NSID = "pub.leaflet.comment";
 export const RECOMMEND_NSID = "pub.leaflet.interactions.recommend";
 export const PUBLICATION_NSID = "pub.leaflet.publication";
+// leaflet migrated to the site.standard.* lexicons (same block model, new envelope)
+export const SITE_DOCUMENT_NSID = "site.standard.document";
+export const SITE_PUBLICATION_NSID = "site.standard.publication";
+
+/** Normalize either document lexicon into the internal LeafletDocument shape
+ * the rest of the app consumes (render, excerpts, word counts, quotes). */
+export function normalizeDocument(record: unknown): LeafletDocument | null {
+  const r = record as { $type?: string; title?: unknown } | null;
+  if (!r || typeof r.title !== "string") return null;
+  if (r.$type === SITE_DOCUMENT_NSID) {
+    const std = r as StandardDocument;
+    return {
+      $type: SITE_DOCUMENT_NSID,
+      title: std.title,
+      description: std.description,
+      publishedAt: std.publishedAt,
+      publication: std.site,
+      tags: std.tags,
+      coverImage: std.coverImage,
+      pages: std.content?.pages ?? [],
+    };
+  }
+  const doc = r as LeafletDocument;
+  if (!Array.isArray(doc.pages)) return null;
+  return doc;
+}
+
+/** Normalize either publication lexicon into the LeafletPublication shape.
+ * site.standard.publication carries `url` instead of `base_path` and may only
+ * have a `basicTheme` — map it onto the legacy theme keys LibraryCard reads. */
+export function normalizePublication(record: unknown): LeafletPublication | null {
+  const r = record as { $type?: string; name?: unknown } | null;
+  if (!r || typeof r.name !== "string") return null;
+  if (r.$type === SITE_PUBLICATION_NSID) {
+    const std = r as StandardPublication;
+    return {
+      $type: SITE_PUBLICATION_NSID,
+      name: std.name,
+      description: std.description,
+      base_path: std.url?.replace(/^https?:\/\//, ""),
+      icon: std.icon,
+      theme:
+        std.theme ??
+        (std.basicTheme
+          ? {
+              backgroundColor: std.basicTheme.background,
+              primary: std.basicTheme.foreground,
+              accentBackground: std.basicTheme.accent,
+              accentText: std.basicTheme.accentForeground,
+            }
+          : undefined),
+    };
+  }
+  return r as LeafletPublication;
+}
 
 /** Rough word count across a document's text blocks. */
 export function documentWordCount(doc: LeafletDocument): number {

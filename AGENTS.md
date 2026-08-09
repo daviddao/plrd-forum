@@ -4,7 +4,7 @@ Guidance for AI agents (and humans) working on this codebase.
 
 ## What this is
 
-A faithful port of LessWrong's ([ForumMagnum](https://github.com/ForumMagnum/ForumMagnum)) visual design as a clean Next.js 16 + Tailwind 4 app. Auth is ATProto OAuth; the data layer is the [leaflet.pub](https://leaflet.pub) lexicons (`pub.leaflet.*`) — every post, comment, vote, and reaction is a record in the logged-in user's own PDS, aggregated into a local SQLite index via Jetstream.
+A faithful port of LessWrong's ([ForumMagnum](https://github.com/ForumMagnum/ForumMagnum)) visual design as a clean Next.js 16 + Tailwind 4 app. Auth is ATProto OAuth; the data layer is the [standard.site](https://standard.site) lexicons (`site.standard.*`, published by [leaflet.pub](https://leaflet.pub), with legacy `pub.leaflet.*` still indexed) — every post, comment, vote, and reaction is a record in the logged-in user's own PDS, aggregated into a local SQLite index via Jetstream.
 
 ## Commands
 
@@ -52,16 +52,18 @@ src/app/              Routes: / (frontpage), /allPosts (time blocks), /concepts 
                       /new-post, /login, /oauth/*, /api/*
 ```
 
-## Data model (leaflet lexicons)
+## Data model (standard.site lexicons)
 
 | Concept | Record | Notes |
 | --- | --- | --- |
-| Post | `pub.leaflet.document` | linearDocument pages of typed blocks |
+| Post | `site.standard.document` (legacy: `pub.leaflet.document`) | linearDocument pages of typed blocks; site.standard wraps them in `content` and uses `site` instead of `publication` |
 | Comment | `pub.leaflet.comment` | threaded via `reply.parent` |
 | Vote/karma | `pub.leaflet.interactions.recommend` | positive-only; karma = count |
 | Reaction | `pub.leaflet.comment` + `linearDocumentQuote` attachment | plaintext = react label (e.g. "Agreed"); UI maps label→icon via `reactionsByLabel` |
-| Publication | `pub.leaflet.publication` | the Library page; theme colors used on cards |
+| Publication | `site.standard.publication` (legacy: `pub.leaflet.publication`) | the Library page; theme colors used on cards |
 | Tag | `document.tags[]` | the Concepts page |
+
+**Leaflet migrated to the `site.standard.*` lexicons** (same block model, new envelope) and kept the legacy records under the *same rkey*. Both shapes are normalized into the internal `LeafletDocument`/`LeafletPublication` shape at ingest (`normalizeDocument`/`normalizePublication` in `src/lib/leaflet/types.ts`); the site.standard record is canonical — indexing one supersedes the legacy row and re-points its votes/comments. `/posts/[did]/[rkey]` and `/library/[did]/[rkey]` URLs don't carry the collection, so `getPost`/`getPublication` try both at-uris. New posts authored here still write `pub.leaflet.document`.
 
 Quote anchors: the block renderer emits `data-block-idx` on each block; `SelectionToolbar` maps DOM selections to `{block: [i], offset}` positions so attachments are meaningful to other leaflet clients. The quoted text itself is kept in a local sidecar column (`comments.quoted_text`) since positions alone aren't renderable.
 

@@ -192,13 +192,60 @@ body {
   box-shadow: var(--lw-sh-appbar);
 }
 
-/* wordmark: ETBookRoman 19px / 500, plain text color */
+/* wordmark lockup — plresearch.org SiteHeader brand:
+   pl_logo_mark.svg + "PL" (semibold) "R&D" (normal, grey-500),
+   followed by a hairline divider and the forum suffix in ETBook italic */
 .site-wordmark {
-  font-family: var(--lw-f-header);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 6px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+.site-logo {
+  height: 28px;
+  width: auto;
+  display: block;
+  transition: transform 0.15s ease; /* plresearch: group-hover:scale-105 */
+}
+.site-wordmark:hover .site-logo {
+  transform: scale(1.06);
+}
+/* text half of the lockup: baseline-aligned so the Calibri "PL R&D" and the
+   ETBook italic "Forum" sit on the same line despite different metrics */
+.wordmark-text {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+  line-height: 1; /* hug the glyphs so the box's center matches the text's
+                     optical center — keeps the logo vertically true */
+}
+.wordmark-pl {
+  font-family: var(--lw-f-sans);
+  font-size: 16.9px;
+  font-weight: 600; /* plresearch: font-semibold */
+  color: var(--lw-text);
+  letter-spacing: 0.01em;
+}
+.wordmark-rd {
+  font-weight: 400; /* plresearch: font-normal text-gray-500 */
+  color: var(--lw-text-dim3);
+}
+.wordmark-divider {
+  width: 1px;
+  height: 18px;
+  background: var(--lw-grey-400);
+  opacity: 0.7;
+  align-self: center; /* hairline centers on the line box, text stays on baseline */
+}
+.wordmark-forum {
+  font-family: var(--lw-f-header); /* ETBookRoman — the LW header serif */
+  font-style: italic;
   font-size: 19px;
   font-weight: 500;
   color: var(--lw-text);
-  letter-spacing: 0;
+  letter-spacing: 0.01em;
 }
 
 /* header buttons: MUI text button — sans 11.375px 500 uppercase */
@@ -218,6 +265,16 @@ body {
 }
 .dark .header-button:hover {
   background: rgba(255, 255, 255, 0.06);
+}
+
+/* New Post — quiet green accent CTA */
+.header-cta {
+  align-items: center;
+  gap: 6px;
+  color: var(--lw-primary);
+}
+.header-cta:hover {
+  background: color-mix(in srgb, var(--lw-primary) 10%, transparent);
 }
 
 /* ============================================================
