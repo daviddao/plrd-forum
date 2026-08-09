@@ -115,6 +115,9 @@ export type LeafletDocument = {
   tags?: string[];
   coverImage?: BlobRef;
   pages: LinearDocumentPage[];
+  /** strongRef to the Bluesky announcement post (site.standard.document) —
+   *  source of leaflet's likes/mentions counts */
+  bskyPostRef?: { uri: string; cid: string };
 };
 
 /** site.standard.document — leaflet's successor lexicon. `content` wraps the
@@ -130,6 +133,7 @@ export type StandardDocument = {
   coverImage?: BlobRef;
   content?: { $type: "pub.leaflet.content"; pages: LinearDocumentPage[] };
   textContent?: string;
+  bskyPostRef?: { uri: string; cid: string };
 };
 
 export type QuotePosition = { block: number[]; offset: number };
@@ -154,6 +158,21 @@ export type LeafletRecommend = {
   $type: "pub.leaflet.interactions.recommend";
   subject: string;
   createdAt: string;
+};
+
+/** site.standard.graph.recommend — the standard.site successor to
+ * pub.leaflet.interactions.recommend; the subject field is `document`. */
+export type StandardRecommend = {
+  $type: "site.standard.graph.recommend";
+  document: string; // at-uri of the recommended document
+  createdAt: string;
+};
+
+/** site.standard.graph.subscription — follow a publication. */
+export type StandardSubscription = {
+  $type: "site.standard.graph.subscription";
+  publication: string; // at-uri of the subscribed publication
+  createdAt?: string;
 };
 
 export type ThemeColor = { $type?: string; hex?: string; [k: string]: unknown };
@@ -196,6 +215,8 @@ export const PUBLICATION_NSID = "pub.leaflet.publication";
 // leaflet migrated to the site.standard.* lexicons (same block model, new envelope)
 export const SITE_DOCUMENT_NSID = "site.standard.document";
 export const SITE_PUBLICATION_NSID = "site.standard.publication";
+export const SITE_RECOMMEND_NSID = "site.standard.graph.recommend";
+export const SITE_SUBSCRIPTION_NSID = "site.standard.graph.subscription";
 
 /** Normalize either document lexicon into the internal LeafletDocument shape
  * the rest of the app consumes (render, excerpts, word counts, quotes). */
@@ -213,6 +234,7 @@ export function normalizeDocument(record: unknown): LeafletDocument | null {
       tags: std.tags,
       coverImage: std.coverImage,
       pages: std.content?.pages ?? [],
+      bskyPostRef: std.bskyPostRef,
     };
   }
   const doc = r as LeafletDocument;

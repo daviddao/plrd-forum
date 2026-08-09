@@ -57,13 +57,14 @@ src/app/              Routes: / (frontpage), /allPosts (time blocks), /concepts 
 | Concept | Record | Notes |
 | --- | --- | --- |
 | Post | `site.standard.document` (legacy: `pub.leaflet.document`) | linearDocument pages of typed blocks; site.standard wraps them in `content` and uses `site` instead of `publication` |
-| Comment | `pub.leaflet.comment` | threaded via `reply.parent` |
-| Vote/karma | `pub.leaflet.interactions.recommend` | positive-only; karma = count |
+| Comment | `pub.leaflet.comment` | threaded via `reply.parent` (standard.site has no comment lexicon yet) |
+| Vote/karma | `site.standard.graph.recommend` (legacy: `pub.leaflet.interactions.recommend`) | positive-only; karma = count; subject field is `document` in the new shape, `subject` in the legacy one. Comment votes still write the legacy lexicon |
+| Follow | `site.standard.graph.subscription` | `{publication}` — the profile/library Subscribe buttons; counts shown from the index |
 | Reaction | `pub.leaflet.comment` + `linearDocumentQuote` attachment | plaintext = react label (e.g. "Agreed"); UI maps label→icon via `reactionsByLabel` |
 | Publication | `site.standard.publication` (legacy: `pub.leaflet.publication`) | the Library page; theme colors used on cards |
 | Tag | `document.tags[]` | the Concepts page |
 
-**Leaflet migrated to the `site.standard.*` lexicons** (same block model, new envelope) and kept the legacy records under the *same rkey*. Both shapes are normalized into the internal `LeafletDocument`/`LeafletPublication` shape at ingest (`normalizeDocument`/`normalizePublication` in `src/lib/leaflet/types.ts`); the site.standard record is canonical — indexing one supersedes the legacy row and re-points its votes/comments. `/posts/[did]/[rkey]` and `/library/[did]/[rkey]` URLs don't carry the collection, so `getPost`/`getPublication` try both at-uris. New posts authored here still write `pub.leaflet.document`.
+**Leaflet migrated to the `site.standard.*` lexicons** (same block model, new envelope) and kept the legacy records under the *same rkey*. Both shapes are normalized into the internal `LeafletDocument`/`LeafletPublication` shape at ingest (`normalizeDocument`/`normalizePublication` in `src/lib/leaflet/types.ts`); the site.standard record is canonical — indexing one supersedes the legacy row and re-points its votes/comments. `/posts/[did]/[rkey]` and `/library/[did]/[rkey]` URLs don't carry the collection, so `getPost`/`getPublication` try both at-uris. **All writes are standard.site-first**: new posts write `site.standard.document` (auto-creating the author's `site.standard.publication` on first post — `site` is a required field), document votes write `site.standard.graph.recommend`, follows write `site.standard.graph.subscription`. Constellation hydration (`hydrateSubject`) also pulls `site.standard.graph.recommend` backlinks (path `.document`) so leaflet.pub likes show up as karma here.
 
 Cosmetics from Simocracy: the frontpage walkers (`WalkingSims`) and the floating
 Einstein feedback agent (`FloatingEinstein` + `POST /api/feedback` → local

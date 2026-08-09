@@ -2,9 +2,31 @@ import { db, tables } from "@/lib/db";
 import { inArray } from "drizzle-orm";
 import { resolvePds } from "@/lib/atproto/resolve";
 import { indexRecord } from "./index";
-import { COMMENT_NSID, RECOMMEND_NSID } from "@/lib/leaflet/types";
+import { COMMENT_NSID, RECOMMEND_NSID, SITE_RECOMMEND_NSID } from "@/lib/leaflet/types";
 
 const CONSTELLATION = "https://constellation.microcosm.blue";
+
+/**
+ * Count Bluesky posts whose link-card embed carries a strongRef to this
+ * document — what leaflet's interaction drawer calls "bluesky mentions".
+ */
+export async function getBskyMentionCount(subjectUri: string): Promise<number> {
+  try {
+    const url = new URL(`${CONSTELLATION}/links/count`);
+    url.searchParams.set("target", subjectUri);
+    url.searchParams.set("collection", "app.bsky.feed.post");
+    url.searchParams.set(
+      "path",
+      ".embed.external.associatedRefs[com.atproto.repo.strongRef].uri",
+    );
+    const res = await fetch(url, { next: { revalidate: 300 } });
+    if (!res.ok) return 0;
+    const data = (await res.json()) as { total?: number };
+    return data.total ?? 0;
+  } catch {
+    return 0;
+  }
+}
 
 type LinkingRecord = { did: string; collection: string; rkey: string };
 
@@ -19,6 +41,7 @@ export async function hydrateSubject(subjectUri: string): Promise<void> {
   const lookups: [string, string][] = [
     [COMMENT_NSID, ".subject"],
     [RECOMMEND_NSID, ".subject"],
+    [SITE_RECOMMEND_NSID, ".document"], // standard.site likes
   ];
 
   const found: LinkingRecord[] = [];

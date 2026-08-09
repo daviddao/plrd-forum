@@ -22,7 +22,8 @@ Every value is ported from ForumMagnum source, not eyeballed:
 | Post | `site.standard.document` (linearDocument pages/blocks in `content`; legacy `pub.leaflet.document` still indexed) |
 | Publication | `site.standard.publication` (legacy `pub.leaflet.publication` still indexed) |
 | Comment | `pub.leaflet.comment` (threaded via `reply.parent`) |
-| Upvote/karma | `pub.leaflet.interactions.recommend` |
+| Upvote/karma | `site.standard.graph.recommend` (legacy `pub.leaflet.interactions.recommend` still indexed; comment votes stay legacy) |
+| Follow | `site.standard.graph.subscription` |
 
 Leaflet migrated documents/publications to `site.standard.*` keeping the same rkeys; both shapes are normalized at ingest and the `site.standard` record supersedes its legacy twin. All writes go to the logged-in user's own PDS. A SQLite index (Drizzle) aggregates the network via a **Jetstream** listener (`src/lib/ingest/jetstream.ts`, started by `instrumentation.ts`) plus on-demand backfill (`POST /api/backfill {"actor":"handle"}`).
 

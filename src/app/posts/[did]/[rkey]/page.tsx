@@ -32,10 +32,21 @@ export default async function PostPage({ params }: { params: Promise<Params> }) 
   if (!post) notFound();
 
   const sessionDid = await getSessionDid();
-  // pull in comments/votes written on other instances (or by other apps)
-  const { hydrateSubject } = await import("@/lib/ingest/constellation");
-  await hydrateSubject(post.uri).catch(() => {});
+  // pull in comments/votes written on other instances (or by other apps),
+  // and count Bluesky posts embedding this document ("mentions")
+  const { hydrateSubject, getBskyMentionCount } = await import("@/lib/ingest/constellation");
+  const [, mentionCount] = await Promise.all([
+    hydrateSubject(post.uri).catch(() => {}),
+    getBskyMentionCount(post.uri),
+  ]);
   const comments = await getCommentTree(post.uri);
+  // announcement-post permalink from the document's bskyPostRef strongRef
+  const bskyRefMatch = post.record.bskyPostRef?.uri.match(
+    /^at:\/\/([^/]+)\/app\.bsky\.feed\.post\/([^/]+)$/,
+  );
+  const bskyUrl = bskyRefMatch
+    ? `https://bsky.app/profile/${bskyRefMatch[1]}/post/${bskyRefMatch[2]}`
+    : null;
 
   const allCommentUris: string[] = [];
   const walk = (nodes: typeof comments) => {
@@ -64,6 +75,17 @@ export default async function PostPage({ params }: { params: Promise<Params> }) 
           </Link>
           <span title={post.publishedAt ?? ""}>{fullDate(post.publishedAt)}</span>
           <span>{readingTime(post.wordCount)}</span>
+          {mentionCount > 0 && (
+            <a
+              href={bskyUrl ?? undefined}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-text-dim3 no-underline hover:text-text"
+              title="Bluesky posts linking to this document"
+            >
+              {mentionCount} {mentionCount === 1 ? "mention" : "mentions"} on Bluesky
+            </a>
+          )}
           <Vote
             subject={post.uri}
             karma={post.karma}

@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { resolveHandleToDid, getProfile, parseAtUri, blobUrl } from "@/lib/atproto/resolve";
-import { getUserContent } from "@/lib/queries";
+import { getUserContent, getSubscriptionInfo } from "@/lib/queries";
+import { getSessionDid } from "@/lib/auth/session";
+import { SubscribeButton } from "@/components/SubscribeButton";
 import { ProfileTabs, type ProfilePost, type ProfileComment } from "@/components/ProfileTabs";
 import { Tooltip } from "@/components/Tooltip";
 import { authorName, readableDate } from "@/lib/format";
@@ -53,6 +55,17 @@ export default async function UserPage({ params }: { params: Promise<Params> }) 
   await backfillActorOnce(did);
   const content = await getUserContent(did);
   const { posts, comments, publications, karma } = content;
+
+  // subscribe target: the user's standard.site publication (legacy fallback)
+  const viewerDid = await getSessionDid();
+  const primaryPub =
+    publications.find((p) => p.uri.includes("/site.standard.publication/")) ??
+    publications[0] ??
+    null;
+  const subInfo = getSubscriptionInfo(
+    publications.map((p) => p.uri),
+    viewerDid,
+  );
 
   const name = authorName(profile, did);
 
@@ -155,15 +168,23 @@ export default async function UserPage({ params }: { params: Promise<Params> }) 
           <aside className="profile-sidebar">
             <div className="sidebar-author-block">
               <h2 className="sidebar-author-name">{name}</h2>
-              {profile?.handle && (
-                <a
-                  href={`https://bsky.app/profile/${profile.handle}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="sidebar-action"
-                >
-                  Subscribe
-                </a>
+              {primaryPub ? (
+                <SubscribeButton
+                  publication={primaryPub.uri}
+                  initialSubscribed={subInfo.mine.has(primaryPub.uri)}
+                  initialCount={subInfo.counts.get(primaryPub.uri) ?? 0}
+                />
+              ) : (
+                profile?.handle && (
+                  <a
+                    href={`https://bsky.app/profile/${profile.handle}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="sidebar-action"
+                  >
+                    Follow on Bluesky
+                  </a>
+                )
               )}
             </div>
             {profile?.description && <p className="sidebar-bio">{profile.description}</p>}

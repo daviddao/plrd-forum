@@ -7,11 +7,15 @@ import {
   PUBLICATION_NSID,
   SITE_DOCUMENT_NSID,
   SITE_PUBLICATION_NSID,
+  SITE_RECOMMEND_NSID,
+  SITE_SUBSCRIPTION_NSID,
   documentWordCount,
   normalizeDocument,
   normalizePublication,
   type LeafletComment,
   type LeafletRecommend,
+  type StandardRecommend,
+  type StandardSubscription,
 } from "@/lib/leaflet/types";
 
 /** Upsert a leaflet record into the index. Returns true if indexed. */
@@ -110,11 +114,23 @@ export function indexRecord(
     return true;
   }
 
-  if (collection === RECOMMEND_NSID) {
-    const v = record as LeafletRecommend;
-    if (!v?.subject) return false;
+  if (collection === RECOMMEND_NSID || collection === SITE_RECOMMEND_NSID) {
+    // site.standard.graph.recommend names its subject field `document`
+    const v = record as Partial<LeafletRecommend> & Partial<StandardRecommend>;
+    const subject = v?.subject ?? v?.document;
+    if (!subject) return false;
     db.insert(tables.votes)
-      .values({ uri, did, subject: v.subject, createdAt: v.createdAt ?? now })
+      .values({ uri, did, subject, createdAt: v.createdAt ?? now })
+      .onConflictDoNothing()
+      .run();
+    return true;
+  }
+
+  if (collection === SITE_SUBSCRIPTION_NSID) {
+    const s = record as StandardSubscription;
+    if (!s?.publication) return false;
+    db.insert(tables.subscriptions)
+      .values({ uri, did, publication: s.publication, createdAt: s.createdAt ?? now })
       .onConflictDoNothing()
       .run();
     return true;
@@ -172,8 +188,10 @@ export function deleteRecord(did: string, collection: string, rkey: string) {
     db.delete(tables.posts).where(eq(tables.posts.uri, uri)).run();
   } else if (collection === COMMENT_NSID) {
     db.delete(tables.comments).where(eq(tables.comments.uri, uri)).run();
-  } else if (collection === RECOMMEND_NSID) {
+  } else if (collection === RECOMMEND_NSID || collection === SITE_RECOMMEND_NSID) {
     db.delete(tables.votes).where(eq(tables.votes.uri, uri)).run();
+  } else if (collection === SITE_SUBSCRIPTION_NSID) {
+    db.delete(tables.subscriptions).where(eq(tables.subscriptions.uri, uri)).run();
   } else if (collection === PUBLICATION_NSID || collection === SITE_PUBLICATION_NSID) {
     db.delete(tables.publications).where(eq(tables.publications.uri, uri)).run();
   }

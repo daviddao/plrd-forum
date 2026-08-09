@@ -48,6 +48,12 @@ function createDb() {
     CREATE TABLE IF NOT EXISTS auth_session (key TEXT PRIMARY KEY, data TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS ingest_cursor (id INTEGER PRIMARY KEY, time_us INTEGER NOT NULL);
 
+    CREATE TABLE IF NOT EXISTS subscriptions (
+      uri TEXT PRIMARY KEY, did TEXT NOT NULL, publication TEXT NOT NULL, created_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS subscriptions_publication_idx ON subscriptions (publication);
+    CREATE INDEX IF NOT EXISTS subscriptions_did_idx ON subscriptions (did);
+
     CREATE TABLE IF NOT EXISTS feedback (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       did TEXT, text TEXT NOT NULL, path TEXT, created_at TEXT NOT NULL

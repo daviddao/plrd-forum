@@ -131,8 +131,8 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
 
       <div className="mt-4 mb-2 h-px w-[140px] bg-(--lw-border-faint)" />
 
-      <a href="https://leaflet.pub" target="_blank" rel="noopener noreferrer" className="nav-sub-item no-underline">
-        leaflet.pub
+      <a href="https://standard.site" target="_blank" rel="noopener noreferrer" className="nav-sub-item no-underline">
+        standard.site
       </a>
       <a href="https://atproto.com" target="_blank" rel="noopener noreferrer" className="nav-sub-item no-underline">
         AT Protocol

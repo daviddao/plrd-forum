@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { getPublication } from "@/lib/queries";
+import { getPublication, getSubscriptionInfo } from "@/lib/queries";
+import { getSessionDid } from "@/lib/auth/session";
 import { PostsItem } from "@/components/PostsItem";
+import { SubscribeButton } from "@/components/SubscribeButton";
 import { authorName } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -26,10 +28,18 @@ export default async function PublicationPage({ params }: { params: Promise<Para
   const pub = await getPublication(did, rkey);
   if (!pub) notFound();
 
+  const viewerDid = await getSessionDid();
+  const subInfo = getSubscriptionInfo([pub.uri], viewerDid);
+
   return (
     <div>
       <div className="section-title">
         <h1>{pub.name}</h1>
+        <SubscribeButton
+          publication={pub.uri}
+          initialSubscribed={subInfo.mine.has(pub.uri)}
+          initialCount={subInfo.counts.get(pub.uri) ?? 0}
+        />
       </div>
       <div className="mb-1 text-[14.3px] text-text-dim3">
         A publication by{" "}

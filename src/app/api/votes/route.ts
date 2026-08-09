@@ -3,9 +3,20 @@ import { getSessionAgent } from "@/lib/auth/session";
 import { db, tables } from "@/lib/db";
 import { and, eq } from "drizzle-orm";
 import { indexRecord, deleteRecord } from "@/lib/ingest";
-import { RECOMMEND_NSID, type LeafletRecommend } from "@/lib/leaflet/types";
+import {
+  RECOMMEND_NSID,
+  SITE_RECOMMEND_NSID,
+  type LeafletRecommend,
+  type StandardRecommend,
+} from "@/lib/leaflet/types";
 
-/** Toggle a pub.leaflet.interactions.recommend (upvote) on a subject. */
+/**
+ * Toggle an upvote on a subject. Documents get the standard.site lexicon
+ * (site.standard.graph.recommend, subject field `document`) so votes cast
+ * here count on leaflet.pub and every other standard.site reader; comments
+ * keep the legacy pub.leaflet.interactions.recommend (standard.site has no
+ * comment-recommend shape yet).
+ */
 export async function POST(req: NextRequest) {
   const auth = await getSessionAgent();
   if (!auth) return NextResponse.json({ error: "not logged in" }, { status: 401 });
@@ -21,29 +32,44 @@ export async function POST(req: NextRequest) {
     .get();
 
   if (existing) {
-    // retract vote
-    const rkey = existing.uri.split("/").pop()!;
+    // retract vote — the stored uri says which lexicon the record used
+    const m = existing.uri.match(/^at:\/\/[^/]+\/([^/]+)\/([^/]+)$/);
+    if (!m) return NextResponse.json({ error: "bad vote uri" }, { status: 500 });
+    const [, collection, rkey] = m;
     await auth.agent.com.atproto.repo.deleteRecord({
       repo: auth.did,
-      collection: RECOMMEND_NSID,
+      collection,
       rkey,
     });
-    deleteRecord(auth.did, RECOMMEND_NSID, rkey);
+    deleteRecord(auth.did, collection, rkey);
     return NextResponse.json({ voted: false });
   }
 
-  const record: LeafletRecommend = {
-    $type: RECOMMEND_NSID,
-    subject,
-    createdAt: new Date().toISOString(),
-  };
+  const isDocument = /\/(site\.standard|pub\.leaflet)\.document\//.test(subject);
+  let collection: string;
+  let record: StandardRecommend | LeafletRecommend;
+  if (isDocument) {
+    collection = SITE_RECOMMEND_NSID;
+    record = {
+      $type: SITE_RECOMMEND_NSID,
+      document: subject,
+      createdAt: new Date().toISOString(),
+    };
+  } else {
+    collection = RECOMMEND_NSID;
+    record = {
+      $type: RECOMMEND_NSID,
+      subject,
+      createdAt: new Date().toISOString(),
+    };
+  }
   const res = await auth.agent.com.atproto.repo.createRecord({
     repo: auth.did,
-    collection: RECOMMEND_NSID,
+    collection,
     record,
   });
   const rkey = res.data.uri.split("/").pop()!;
-  indexRecord(auth.did, RECOMMEND_NSID, rkey, record);
+  indexRecord(auth.did, collection, rkey, record);
 
   return NextResponse.json({ voted: true });
 }

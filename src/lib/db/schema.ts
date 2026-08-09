@@ -87,6 +87,21 @@ export const authSession = sqliteTable("auth_session", {
   data: text("data").notNull(),
 });
 
+/** Indexed site.standard.graph.subscription records — publication follows */
+export const subscriptions = sqliteTable(
+  "subscriptions",
+  {
+    uri: text("uri").primaryKey(),
+    did: text("did").notNull(), // the subscriber
+    publication: text("publication").notNull(), // publication at-uri
+    createdAt: text("created_at").notNull(),
+  },
+  (t) => [
+    index("subscriptions_publication_idx").on(t.publication),
+    index("subscriptions_did_idx").on(t.did),
+  ],
+);
+
 /** Feedback left via the floating Einstein widget */
 export const feedback = sqliteTable("feedback", {
   id: integer("id").primaryKey({ autoIncrement: true }),

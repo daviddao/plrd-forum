@@ -7,6 +7,8 @@ import {
   PUBLICATION_NSID,
   SITE_DOCUMENT_NSID,
   SITE_PUBLICATION_NSID,
+  SITE_RECOMMEND_NSID,
+  SITE_SUBSCRIPTION_NSID,
 } from "@/lib/leaflet/types";
 
 // legacy collections first so the site.standard pass supersedes migrated rkeys
@@ -17,6 +19,8 @@ const COLLECTIONS = [
   PUBLICATION_NSID,
   SITE_DOCUMENT_NSID,
   SITE_PUBLICATION_NSID,
+  SITE_RECOMMEND_NSID,
+  SITE_SUBSCRIPTION_NSID,
 ];
 
 /** Fetch and index all pub.leaflet.* records from an actor's PDS. */

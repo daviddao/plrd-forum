@@ -350,6 +350,95 @@ export async function getPublication(did: string, rkey: string) {
   };
 }
 
+/** Subscriber counts for publications + which ones the viewer follows. */
+export function getSubscriptionInfo(
+  publicationUris: string[],
+  viewerDid: string | null,
+): { counts: Map<string, number>; mine: Set<string> } {
+  const counts = new Map<string, number>();
+  const mine = new Set<string>();
+  if (publicationUris.length === 0) return { counts, mine };
+  const rows = db
+    .select({ publication: tables.subscriptions.publication, n: sql<number>`COUNT(*)` })
+    .from(tables.subscriptions)
+    .where(inArray(tables.subscriptions.publication, publicationUris))
+    .groupBy(tables.subscriptions.publication)
+    .all();
+  for (const r of rows) counts.set(r.publication, r.n);
+  if (viewerDid) {
+    const mineRows = db
+      .select({ publication: tables.subscriptions.publication })
+      .from(tables.subscriptions)
+      .where(
+        sql`${tables.subscriptions.did} = ${viewerDid} AND ${inArray(tables.subscriptions.publication, publicationUris)}`,
+      )
+      .all();
+    for (const r of mineRows) mine.add(r.publication);
+  }
+  return { counts, mine };
+}
+
+export type AuthorCard = {
+  did: string;
+  karma: number;
+  postCount: number;
+  commentCount: number;
+  recentPosts: { uri: string; did: string; rkey: string; title: string; karma: number }[];
+};
+
+/**
+ * Per-author stats for the LW-style user hover card (LWUserTooltipContent):
+ * karma (votes received on their posts+comments), post/comment counts and
+ * their 3 most recent posts. Batched — one query set for a whole posts list.
+ */
+export function getAuthorCards(dids: string[]): Map<string, AuthorCard> {
+  const out = new Map<string, AuthorCard>();
+  if (dids.length === 0) return out;
+  const unique = [...new Set(dids)];
+  for (const did of unique) {
+    out.set(did, { did, karma: 0, postCount: 0, commentCount: 0, recentPosts: [] });
+  }
+
+  const postCounts = db
+    .select({ did: tables.posts.did, n: sql<number>`COUNT(*)` })
+    .from(tables.posts)
+    .where(inArray(tables.posts.did, unique))
+    .groupBy(tables.posts.did)
+    .all();
+  for (const r of postCounts) out.get(r.did)!.postCount = r.n;
+
+  const commentCounts = db
+    .select({ did: tables.comments.did, n: sql<number>`COUNT(*)` })
+    .from(tables.comments)
+    .where(inArray(tables.comments.did, unique))
+    .groupBy(tables.comments.did)
+    .all();
+  for (const r of commentCounts) out.get(r.did)!.commentCount = r.n;
+
+  for (const did of unique) {
+    const karmaRow = db.get<{ n: number }>(sql`
+      SELECT COUNT(*) as n FROM votes v
+      WHERE v.subject IN (SELECT uri FROM posts WHERE did = ${did})
+         OR v.subject IN (SELECT uri FROM comments WHERE did = ${did})
+    `);
+    out.get(did)!.karma = karmaRow?.n ?? 0;
+    out.get(did)!.recentPosts = db
+      .select({
+        uri: tables.posts.uri,
+        did: tables.posts.did,
+        rkey: tables.posts.rkey,
+        title: tables.posts.title,
+        karma: sql<number>`(SELECT COUNT(*) FROM votes v WHERE v.subject = posts.uri)`,
+      })
+      .from(tables.posts)
+      .where(eq(tables.posts.did, did))
+      .orderBy(desc(tables.posts.publishedAt))
+      .limit(3)
+      .all();
+  }
+  return out;
+}
+
 export async function getUserContent(did: string) {
   const posts = db
     .select({

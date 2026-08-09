@@ -10,7 +10,7 @@ const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME ?? "PLRD Forum";
 export const metadata: Metadata = {
   title: { default: SITE_NAME, template: `%s — ${SITE_NAME}` },
   description:
-    "A LessWrong-style forum built on ATProto and pub.leaflet lexicons.",
+    "A LessWrong-style forum built on ATProto and the standard.site lexicons.",
 };
 
 const themeInit = `
