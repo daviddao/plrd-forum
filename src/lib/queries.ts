@@ -350,6 +350,17 @@ export async function getPublication(did: string, rkey: string) {
   };
 }
 
+/** Live vote count for a subject — used to recompute karma after
+ * Constellation hydration (getPost's count predates hydration). */
+export function getVoteCount(subjectUri: string): number {
+  const row = db
+    .select({ n: sql<number>`COUNT(*)` })
+    .from(tables.votes)
+    .where(eq(tables.votes.subject, subjectUri))
+    .get();
+  return row?.n ?? 0;
+}
+
 /** Subscriber counts for publications + which ones the viewer follows. */
 export function getSubscriptionInfo(
   publicationUris: string[],

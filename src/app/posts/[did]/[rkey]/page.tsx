@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { getPost, getCommentTree, getMyVotes } from "@/lib/queries";
+import { getPost, getCommentTree, getMyVotes, getVoteCount } from "@/lib/queries";
 import { getSessionDid } from "@/lib/auth/session";
 import { DocumentBody } from "@/lib/leaflet/render";
 import { Vote } from "@/components/Vote";
@@ -40,6 +40,9 @@ export default async function PostPage({ params }: { params: Promise<Params> }) 
     getBskyMentionCount(post.uri),
   ]);
   const comments = await getCommentTree(post.uri);
+  // hydration may have pulled in fresh recommends — recompute karma so the
+  // very first render on an ephemeral instance already shows the real count
+  post.karma = getVoteCount(post.uri);
   // announcement-post permalink from the document's bskyPostRef strongRef
   const bskyRefMatch = post.record.bskyPostRef?.uri.match(
     /^at:\/\/([^/]+)\/app\.bsky\.feed\.post\/([^/]+)$/,
