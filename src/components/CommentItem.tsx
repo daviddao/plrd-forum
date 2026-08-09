@@ -9,6 +9,8 @@ import { timeAgo, fullDateTime, authorName } from "@/lib/format";
 import { Vote } from "./Vote";
 import { Tooltip } from "./Tooltip";
 import { CommentForm } from "./CommentForm";
+import { reactionsByLabel } from "@/lib/reactions";
+import { ReactionIcon } from "./ReactionsPalette";
 
 /**
  * Port of ForumMagnum's CommentsNode / CommentsItem: bordered comment frames
@@ -68,11 +70,29 @@ export function CommentItem({
                   : node.quotedText}
               </div>
             )}
-            <div className="comment-body">
-              <p>
-                <RichText text={node.plaintext} facets={node.facets as Facet[] | null} />
-              </p>
-            </div>
+            {(() => {
+              // quote-anchored comment whose text is a react label → render as a react chip
+              const react = node.quotedText
+                ? reactionsByLabel.get(node.plaintext.trim().toLowerCase())
+                : undefined;
+              if (react) {
+                return (
+                  <div className="pb-1">
+                    <span className="reaction-chip" title={react.description}>
+                      <ReactionIcon reaction={react} size={16} />
+                      {react.label}
+                    </span>
+                  </div>
+                );
+              }
+              return (
+                <div className="comment-body">
+                  <p>
+                    <RichText text={node.plaintext} facets={node.facets as Facet[] | null} />
+                  </p>
+                </div>
+              );
+            })()}
             <div className="pt-1.5 pb-1">
               <span className="comment-reply-link" onClick={() => setReplying(!replying)}>
                 Reply

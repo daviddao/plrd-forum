@@ -3,6 +3,9 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { QuotePosition } from "@/lib/leaflet/types";
+import { ReactionsPalette, ReactionIcon } from "./ReactionsPalette";
+import { AddReactionIcon } from "./icons/AddReactionIcon";
+import { getReaction, type ReactionType } from "@/lib/reactions";
 
 export type QuoteSelection = {
   text: string;
@@ -10,7 +13,8 @@ export type QuoteSelection = {
   end: QuotePosition;
 };
 
-const REACTIONS = ["👍", "❤️", "💡", "🎯", "❓"];
+/** LW's primary reacts, shown inline on the toolbar before the full palette. */
+const INLINE_REACT_NAMES = ["agree", "disagree", "important", "thanks", "changemind"];
 
 /**
  * LW-style selection popup: highlight text in the post body and get a
@@ -36,8 +40,15 @@ export function SelectionToolbar({
     left: number;
   } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const paletteOpenRef = useRef(false);
+  const toolbarRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    paletteOpenRef.current = paletteOpen;
+  }, [paletteOpen]);
 
   const readSelection = useCallback(() => {
+    if (paletteOpenRef.current) return; // palette search steals focus; keep state
     const container = containerRef.current;
     const sel = window.getSelection();
     if (!container || !sel || sel.rangeCount === 0 || sel.isCollapsed) {
@@ -63,25 +74,40 @@ export function SelectionToolbar({
     }
 
     const rect = range.getBoundingClientRect();
+    setPaletteOpen(false);
     setState({
       quote: { text: text.slice(0, 1000), start, end },
       top: rect.top - 44,
-      left: Math.max(8, rect.left + rect.width / 2 - 90),
+      left: Math.max(8, rect.left + rect.width / 2 - 130),
     });
   }, []);
 
   useEffect(() => {
     const onMouseUp = () => setTimeout(readSelection, 10);
     const onSelectionChange = () => {
-      if (window.getSelection()?.isCollapsed) setState(null);
+      if (paletteOpenRef.current) return;
+      if (window.getSelection()?.isCollapsed) {
+        setState(null);
+      }
+    };
+    const onDocMouseDown = (e: MouseEvent) => {
+      // click outside the toolbar/palette closes it
+      if (toolbarRef.current && !toolbarRef.current.contains(e.target as Node)) {
+        setPaletteOpen(false);
+      }
     };
     document.addEventListener("mouseup", onMouseUp);
     document.addEventListener("selectionchange", onSelectionChange);
-    const onScroll = () => setState(null);
+    document.addEventListener("mousedown", onDocMouseDown);
+    const onScroll = () => {
+      if (paletteOpenRef.current) return;
+      setState(null);
+    };
     window.addEventListener("scroll", onScroll, true);
     return () => {
       document.removeEventListener("mouseup", onMouseUp);
       document.removeEventListener("selectionchange", onSelectionChange);
+      document.removeEventListener("mousedown", onDocMouseDown);
       window.removeEventListener("scroll", onScroll, true);
     };
   }, [readSelection]);
@@ -98,20 +124,23 @@ export function SelectionToolbar({
     document.getElementById("comments")?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const react = async (emoji: string) => {
+  const react = async (reaction: ReactionType) => {
     if (!state || busy) return;
     if (!loggedIn) {
       router.push("/login");
       return;
     }
     setBusy(true);
+    // The comment plaintext is the react label, so other leaflet clients see
+    // readable text; our UI maps it back to the LW react icon via the quote.
     await fetch("/api/comments", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ subject, text: emoji, quote: state.quote }),
+      body: JSON.stringify({ subject, text: reaction.label, quote: state.quote }),
     });
     setBusy(false);
     setState(null);
+    setPaletteOpen(false);
     window.getSelection()?.removeAllRanges();
     router.refresh();
   };
@@ -121,9 +150,14 @@ export function SelectionToolbar({
       {children}
       {state && (
         <div
+          ref={toolbarRef}
           className="selection-toolbar"
           style={{ position: "fixed", top: state.top, left: state.left, zIndex: 1200 }}
-          onMouseDown={(e) => e.preventDefault()}
+          onMouseDown={(e) => {
+            // keep the text selection when clicking toolbar buttons, but let
+            // the palette's search input receive focus normally
+            if (!(e.target as Element).closest(".reactions-palette")) e.preventDefault();
+          }}
         >
           <button className="selection-toolbar-button" onClick={quoteInComment} title="Quote in a new comment">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
@@ -132,17 +166,38 @@ export function SelectionToolbar({
             Comment
           </button>
           <span className="selection-toolbar-divider" />
-          {REACTIONS.map((emoji) => (
-            <button
-              key={emoji}
-              className="selection-toolbar-react"
-              onClick={() => react(emoji)}
-              disabled={busy}
-              title={`React with ${emoji} (posts a quote-anchored comment)`}
+          {INLINE_REACT_NAMES.map((name) => {
+            const r = getReaction(name);
+            if (!r) return null;
+            return (
+              <button
+                key={name}
+                className="selection-toolbar-react"
+                onClick={() => react(r)}
+                disabled={busy}
+                title={r.label}
+              >
+                <span className="selection-toolbar-react-icon">
+                  <ReactionIcon reaction={r} size={17} />
+                </span>
+              </button>
+            );
+          })}
+          <button
+            className="selection-toolbar-react"
+            onClick={() => setPaletteOpen((o) => !o)}
+            title="More reactions…"
+          >
+            <AddReactionIcon width={17} height={17} style={{ color: "#fff" }} />
+          </button>
+          {paletteOpen && (
+            <div
+              className="lw-popper-card"
+              style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, width: 350 }}
             >
-              {emoji}
-            </button>
-          ))}
+              <ReactionsPalette onPick={react} />
+            </div>
+          )}
         </div>
       )}
     </div>
