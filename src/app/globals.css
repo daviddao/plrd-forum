@@ -1537,3 +1537,185 @@ input[type="text"], input[type="url"], textarea {
   opacity: 0.4;
   cursor: default;
 }
+
+/* ============================================================
+   WYSIWYG editor — logged-in LW editPost surface
+   ============================================================ */
+.editor-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  background: var(--lw-paper);
+}
+
+.editor-byline {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-family: var(--lw-f-sans);
+  font-size: 14.3px;
+  color: var(--lw-text-dim);
+}
+.editor-byline .author {
+  color: var(--lw-text);
+  font-weight: 600;
+}
+.editor-byline .sep {
+  width: 10px;
+}
+.editor-byline .linkish {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--lw-text-dim4);
+  cursor: pointer;
+}
+.editor-byline .linkish:hover { color: var(--lw-text); }
+
+/* the contenteditable surface — inherits .post-body typography */
+.edit-surface {
+  position: relative;
+  outline: none;
+  min-height: 55vh;
+  caret-color: var(--lw-text);
+}
+.edit-surface[data-empty]::before {
+  content: "Type here! Use '/' for editor commands.";
+  color: var(--lw-grey-400);
+  position: absolute;
+  pointer-events: none;
+}
+.edit-surface a { cursor: text; }
+.edit-surface pre {
+  white-space: pre-wrap;
+}
+
+/* balloon toolbar (CKEditor style) */
+.balloon-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--lw-paper);
+  border: 1px solid var(--lw-grey-300);
+  border-radius: 6px;
+  padding: 4px 6px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+  animation: selection-toolbar-in 0.12s ease-out;
+}
+.balloon-toolbar button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 28px;
+  border: none;
+  background: none;
+  border-radius: 3px;
+  color: var(--lw-grey-700);
+  cursor: pointer;
+  font-family: var(--lw-f-serif);
+  font-size: 15px;
+  padding: 0 5px;
+}
+.balloon-toolbar button:hover {
+  background: var(--lw-grey-100);
+  color: var(--lw-text);
+}
+.balloon-toolbar .divider {
+  width: 1px;
+  height: 18px;
+  background: var(--lw-grey-300);
+  margin: 0 4px;
+}
+.balloon-select {
+  font-family: var(--lw-f-sans);
+  font-size: 13px;
+  color: var(--lw-grey-700);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  outline: none;
+  padding: 2px 2px;
+  max-width: 110px;
+}
+
+/* slash-command menu */
+.slash-menu {
+  width: 260px;
+  background: var(--lw-paper);
+  border-radius: 4px;
+  box-shadow: var(--lw-sh-lw-card);
+  padding: 4px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.slash-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  background: none;
+  border-radius: 3px;
+  cursor: pointer;
+  text-align: left;
+}
+.slash-item.active {
+  background: var(--lw-grey-100);
+}
+.slash-item .label {
+  font-family: var(--lw-f-sans);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--lw-text);
+}
+.slash-item .hint {
+  font-family: var(--lw-f-sans);
+  font-size: 12px;
+  color: var(--lw-text-dim4);
+}
+
+/* right rail — LW's floating round action buttons */
+.editor-rail {
+  position: fixed;
+  top: 88px;
+  right: 22px;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.editor-rail-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  background: var(--lw-paper);
+  color: var(--lw-grey-700);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+.editor-rail-button:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+.editor-rail-button.publish {
+  background: var(--lw-primary);
+  color: #fff;
+}
+.editor-rail-button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.editor-settings-popover {
+  position: absolute;
+  top: 0;
+  right: 46px;
+  width: 260px;
+  padding: 12px;
+}
