@@ -267,6 +267,7 @@ export async function getUserContent(did: string) {
       title: tables.posts.title,
       publishedAt: tables.posts.publishedAt,
       wordCount: tables.posts.wordCount,
+      coverImageCid: tables.posts.coverImageCid,
       record: tables.posts.record,
       karma: sql<number>`(SELECT COUNT(*) FROM votes v WHERE v.subject = posts.uri)`,
       commentCount: sql<number>`(SELECT COUNT(*) FROM comments c WHERE c.subject = posts.uri)`,

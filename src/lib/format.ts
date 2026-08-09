@@ -43,3 +43,16 @@ export function readingTime(wordCount: number): string {
 export function authorName(p: { displayName?: string | null; handle?: string | null } | null, did: string): string {
   return p?.displayName || p?.handle || did.slice(0, 16) + "…";
 }
+
+/** LW ProfilePage date format (formatReadableDate): "Jun 17" / "Mar 12, 2019" */
+export function readableDate(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const sameYear = d.getFullYear() === new Date().getFullYear();
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    ...(sameYear ? {} : { year: "numeric" }),
+  });
+}
