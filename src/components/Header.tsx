@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getSessionDid } from "@/lib/auth/session";
 import { getProfile } from "@/lib/atproto/resolve";
 import { ThemeToggle } from "./ThemeToggle";
+import { HamburgerButton } from "./nav-context";
 
 const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME ?? "PLRD FORUM";
 
@@ -13,15 +14,7 @@ export async function Header() {
   return (
     <header className="site-header sticky top-0 z-50 h-16">
       <div className="flex h-full items-center px-2 sm:px-4">
-        {/* hamburger (decorative parity with LW; nav is the fixed sidebar) */}
-        <button
-          aria-label="Menu"
-          className="mr-2 hidden h-12 w-12 cursor-pointer items-center justify-center rounded-full text-text hover:bg-black/5 sm:flex dark:hover:bg-white/10"
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" />
-          </svg>
-        </button>
+        <HamburgerButton />
 
         <Link href="/" className="site-wordmark no-underline">
           {SITE_NAME.toUpperCase()}

@@ -23,7 +23,8 @@ function createDb() {
     CREATE TABLE IF NOT EXISTS comments (
       uri TEXT PRIMARY KEY, did TEXT NOT NULL, rkey TEXT NOT NULL,
       subject TEXT NOT NULL, parent TEXT, plaintext TEXT NOT NULL,
-      facets TEXT, created_at TEXT NOT NULL, indexed_at TEXT NOT NULL
+      facets TEXT, quoted_text TEXT, attachment TEXT,
+      created_at TEXT NOT NULL, indexed_at TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS comments_subject_idx ON comments (subject);
     CREATE INDEX IF NOT EXISTS comments_did_idx ON comments (did);
@@ -47,6 +48,17 @@ function createDb() {
     CREATE TABLE IF NOT EXISTS auth_session (key TEXT PRIMARY KEY, data TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS ingest_cursor (id INTEGER PRIMARY KEY, time_us INTEGER NOT NULL);
   `);
+  // lightweight migrations for existing databases
+  for (const stmt of [
+    "ALTER TABLE comments ADD COLUMN quoted_text TEXT",
+    "ALTER TABLE comments ADD COLUMN attachment TEXT",
+  ]) {
+    try {
+      sqlite.exec(stmt);
+    } catch {
+      // column already exists
+    }
+  }
   return sqlite;
 }
 

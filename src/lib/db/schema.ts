@@ -30,6 +30,8 @@ export const comments = sqliteTable(
     parent: text("parent"), // parent comment at-uri (null = top level)
     plaintext: text("plaintext").notNull(),
     facets: text("facets", { mode: "json" }),
+    quotedText: text("quoted_text"),
+    attachment: text("attachment", { mode: "json" }),
     createdAt: text("created_at").notNull(),
     indexedAt: text("indexed_at").notNull(),
   },

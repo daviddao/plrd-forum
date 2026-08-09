@@ -66,6 +66,7 @@ export function indexRecord(
         parent: c.reply?.parent ?? null,
         plaintext: c.plaintext,
         facets: c.facets ? JSON.stringify(c.facets) : null,
+        attachment: c.attachment ? JSON.stringify(c.attachment) : null,
         createdAt: c.createdAt ?? now,
         indexedAt: now,
       })
@@ -74,6 +75,7 @@ export function indexRecord(
         set: {
           plaintext: c.plaintext,
           facets: c.facets ? JSON.stringify(c.facets) : null,
+          attachment: c.attachment ? JSON.stringify(c.attachment) : null,
           indexedAt: now,
         },
       })

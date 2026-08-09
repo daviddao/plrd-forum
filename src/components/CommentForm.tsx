@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import type { QuoteSelection } from "./SelectionToolbar";
 
 export function CommentForm({
   subject,
@@ -9,17 +10,30 @@ export function CommentForm({
   loggedIn,
   onDone,
   autoFocus,
+  listenForQuotes,
 }: {
   subject: string;
   parent?: string;
   loggedIn: boolean;
   onDone?: () => void;
   autoFocus?: boolean;
+  /** top-level form on a post page: receives quotes from the selection toolbar */
+  listenForQuotes?: boolean;
 }) {
   const router = useRouter();
   const [text, setText] = useState("");
+  const [quote, setQuote] = useState<QuoteSelection | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!listenForQuotes) return;
+    const onQuote = (e: Event) => {
+      setQuote((e as CustomEvent<QuoteSelection>).detail);
+    };
+    window.addEventListener("plrd-quote", onQuote);
+    return () => window.removeEventListener("plrd-quote", onQuote);
+  }, [listenForQuotes]);
 
   const submit = async () => {
     if (!text.trim() || busy) return;
@@ -28,7 +42,7 @@ export function CommentForm({
     const res = await fetch("/api/comments", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ subject, parent, text }),
+      body: JSON.stringify({ subject, parent, text, ...(quote ? { quote } : {}) }),
     });
     setBusy(false);
     if (!res.ok) {
@@ -36,6 +50,7 @@ export function CommentForm({
       return;
     }
     setText("");
+    setQuote(null);
     onDone?.();
     router.refresh();
   };
@@ -50,11 +65,27 @@ export function CommentForm({
 
   return (
     <div className="border border-(--lw-border-std) bg-paper p-2.5">
+      {quote && (
+        <div className="comment-quote relative pr-8">
+          {quote.text.length > 200 ? quote.text.slice(0, 200) + "…" : quote.text}
+          <button
+            onClick={() => setQuote(null)}
+            className="absolute top-1 right-2 cursor-pointer text-[15px] text-text-dim4 hover:text-text"
+            title="Remove quote"
+          >
+            ×
+          </button>
+        </div>
+      )}
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
         autoFocus={autoFocus}
-        placeholder="Write a comment… (**bold**, *italic*, `code`, [links](url))"
+        placeholder={
+          quote
+            ? "Comment on the highlighted passage…"
+            : "Write a comment… (**bold**, *italic*, `code`, [links](url))"
+        }
         rows={4}
         className="comment-body w-full resize-y border-none bg-transparent outline-none placeholder:text-text-dim4"
       />

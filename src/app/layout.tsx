@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Header } from "@/components/Header";
-import { NavSidebar } from "@/components/NavSidebar";
+import { NavSidebar, NavBalance } from "@/components/NavSidebar";
+import { NavProvider } from "@/components/nav-context";
 
 const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME ?? "PLRD Forum";
 
@@ -34,15 +35,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         )}
       </head>
       <body className="min-h-screen bg-bg text-text antialiased">
-        <Header />
-        <div className="flex">
-          <NavSidebar />
-          <main className="mx-auto w-full max-w-[765px] px-2 pb-24 sm:px-4">
-            {children}
-          </main>
-          {/* balance the sidebar so the column stays centered, like LW */}
-          <div className="hidden w-[210px] shrink-0 xl:block" />
-        </div>
+        <NavProvider>
+          <Header />
+          <div className="flex">
+            <NavSidebar />
+            <main className="mx-auto w-full max-w-[765px] px-2 pb-24 sm:px-4">
+              {children}
+            </main>
+            {/* balance the sidebar so the column stays centered, like LW */}
+            <NavBalance />
+          </div>
+        </NavProvider>
       </body>
     </html>
   );

@@ -24,7 +24,9 @@ export function DocumentBody({ doc, did, pds }: { doc: LeafletDocument; did: str
       {(doc.pages ?? []).map((page, i) => (
         <React.Fragment key={page.id ?? i}>
           {(page.blocks ?? []).map((b, j) => (
-            <Block key={j} entry={b} ctx={ctx} />
+            <div key={j} data-block-idx={j} data-page-idx={i}>
+              <Block entry={b} ctx={ctx} />
+            </div>
           ))}
         </React.Fragment>
       ))}

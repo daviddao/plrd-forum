@@ -61,6 +61,13 @@ export function CommentItem({
 
         {!collapsed && (
           <>
+            {node.quotedText && (
+              <div className="comment-quote" title="Quoted from the post">
+                {node.quotedText.length > 240
+                  ? node.quotedText.slice(0, 240) + "\u2026"
+                  : node.quotedText}
+              </div>
+            )}
             <div className="comment-body">
               <p>
                 <RichText text={node.plaintext} facets={node.facets as Facet[] | null} />

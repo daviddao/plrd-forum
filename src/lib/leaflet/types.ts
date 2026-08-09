@@ -117,6 +117,14 @@ export type LeafletDocument = {
   pages: LinearDocumentPage[];
 };
 
+export type QuotePosition = { block: number[]; offset: number };
+
+export type LinearDocumentQuote = {
+  $type: "pub.leaflet.comment#linearDocumentQuote";
+  document: string;
+  quote: { start: QuotePosition; end: QuotePosition };
+};
+
 export type LeafletComment = {
   $type: "pub.leaflet.comment";
   subject: string;
@@ -124,6 +132,7 @@ export type LeafletComment = {
   createdAt: string;
   facets?: Facet[];
   reply?: { parent: string };
+  attachment?: LinearDocumentQuote;
 };
 
 export type LeafletRecommend = {

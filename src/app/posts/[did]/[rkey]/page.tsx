@@ -7,6 +7,7 @@ import { DocumentBody } from "@/lib/leaflet/render";
 import { Vote } from "@/components/Vote";
 import { CommentItem } from "@/components/CommentItem";
 import { CommentForm } from "@/components/CommentForm";
+import { SelectionToolbar } from "@/components/SelectionToolbar";
 import { fullDate, readingTime, authorName } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -69,7 +70,9 @@ export default async function PostPage({ params }: { params: Promise<Params> }) 
           />
         </div>
 
-        <DocumentBody doc={post.record} did={did} pds={post.author?.pds ?? null} />
+        <SelectionToolbar subject={post.uri} loggedIn={!!sessionDid}>
+          <DocumentBody doc={post.record} did={did} pds={post.author?.pds ?? null} />
+        </SelectionToolbar>
 
         {/* bottom vote, centered like LW */}
         <div className="mt-12 flex items-center justify-center border-t border-(--lw-border-faint) pt-6">
@@ -89,7 +92,7 @@ export default async function PostPage({ params }: { params: Promise<Params> }) 
           {commentCount} {commentCount === 1 ? "comment" : "comments"}
         </div>
         <div className="mb-6">
-          <CommentForm subject={post.uri} loggedIn={!!sessionDid} />
+          <CommentForm subject={post.uri} loggedIn={!!sessionDid} listenForQuotes />
         </div>
         {comments.map((node) => (
           <CommentItem

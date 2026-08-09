@@ -43,6 +43,7 @@ export type CommentNode = {
   did: string;
   plaintext: string;
   facets: unknown;
+  quotedText: string | null;
   createdAt: string;
   karma: number;
   author: ActorProfile | null;
@@ -122,6 +123,7 @@ export async function getCommentTree(subjectUri: string): Promise<CommentNode[]>
       did: r.did,
       plaintext: r.plaintext,
       facets: r.facets ? JSON.parse(r.facets as string) : null,
+      quotedText: r.quotedText ?? null,
       createdAt: r.createdAt,
       karma: votesBySubject.get(r.uri) ?? 0,
       author: profiles.get(r.did) ?? null,
