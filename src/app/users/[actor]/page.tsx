@@ -35,7 +35,7 @@ export default async function UserPage({ params }: { params: Promise<Params> }) 
   const did = await resolveHandleToDid(actor);
   if (!did) notFound();
   const profile = await getProfile(did);
-  const { posts, comments, publications, karma } = await getUserContent(did);
+  const { posts, comments, publications, karma, tagCount } = await getUserContent(did);
 
   const name = authorName(profile, did);
 
@@ -63,6 +63,12 @@ export default async function UserPage({ params }: { params: Promise<Params> }) 
               <span className="profile-meta-item">
                 <MessageIcon />
                 {comments.length}
+              </span>
+            </Tooltip>
+            <Tooltip title={`${tagCount} tag${tagCount === 1 ? "" : "s"}`} placement="bottom">
+              <span className="profile-meta-item">
+                <PencilIcon />
+                {tagCount}
               </span>
             </Tooltip>
           </span>
@@ -115,9 +121,12 @@ export default async function UserPage({ params }: { params: Promise<Params> }) 
       <section className="mb-8">
         <div className="section-title">
           <h2>Posts</h2>
+          <span className="text-[14.3px] text-text-dim3">
+            Sorted by <span className="font-semibold">New</span>
+          </span>
         </div>
         {posts.length === 0 ? (
-          <p className="text-[14.3px] text-text-dim3">No posts indexed.</p>
+          <p className="text-[14.3px] text-text-dim3">No posts to display.</p>
         ) : (
           <div>
             {posts.map((post) => (
@@ -133,7 +142,7 @@ export default async function UserPage({ params }: { params: Promise<Params> }) 
           <h2>Comments</h2>
         </div>
         {comments.length === 0 ? (
-          <p className="text-[14.3px] text-text-dim3">No comments indexed.</p>
+          <p className="text-[14.3px] text-text-dim3">No comments to display.</p>
         ) : (
           comments.map((c) => {
             const target = parseAtUri(c.subject);
@@ -192,6 +201,13 @@ function MessageIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor">
       <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z" />
+    </svg>
+  );
+}
+function PencilIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor">
+      <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
     </svg>
   );
 }

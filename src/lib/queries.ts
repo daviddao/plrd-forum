@@ -323,5 +323,20 @@ export async function getUserContent(did: string) {
        OR v.subject IN (SELECT uri FROM comments WHERE did = ${did})
   `);
 
-  return { posts, comments, publications, karma: karmaRow?.n ?? 0 };
+  // distinct tags across their posts (→ LW's wikitag-edits pencil stat)
+  const tagSet = new Set<string>();
+  for (const row of db
+    .select({ record: tables.posts.record })
+    .from(tables.posts)
+    .where(eq(tables.posts.did, did))
+    .all()) {
+    try {
+      const doc = JSON.parse(row.record as string) as LeafletDocument;
+      for (const t of doc.tags ?? []) if (t.trim()) tagSet.add(t.trim());
+    } catch {
+      // ignore
+    }
+  }
+
+  return { posts, comments, publications, karma: karmaRow?.n ?? 0, tagCount: tagSet.size };
 }
