@@ -1,12 +1,5 @@
-import {
-  NodeOAuthClient,
-  type NodeSavedSession,
-  type NodeSavedSessionStore,
-  type NodeSavedState,
-  type NodeSavedStateStore,
-} from "@atproto/oauth-client-node";
-import { db, tables } from "@/lib/db";
-import { eq } from "drizzle-orm";
+import { NodeOAuthClient } from "@atproto/oauth-client-node";
+import { cookieStateStore, cookieSessionStore } from "./cookie-stores";
 
 export const SCOPE = "atproto transition:generic";
 
@@ -17,38 +10,6 @@ export function publicUrl(): string {
 function isLoopback(url: string) {
   return url.startsWith("http://127.0.0.1") || url.startsWith("http://localhost") || url.startsWith("http://[::1]");
 }
-
-const stateStore: NodeSavedStateStore = {
-  async set(key, state) {
-    db.insert(tables.authState)
-      .values({ key, data: JSON.stringify(state) })
-      .onConflictDoUpdate({ target: tables.authState.key, set: { data: JSON.stringify(state) } })
-      .run();
-  },
-  async get(key) {
-    const row = db.select().from(tables.authState).where(eq(tables.authState.key, key)).get();
-    return row ? (JSON.parse(row.data) as NodeSavedState) : undefined;
-  },
-  async del(key) {
-    db.delete(tables.authState).where(eq(tables.authState.key, key)).run();
-  },
-};
-
-const sessionStore: NodeSavedSessionStore = {
-  async set(key, session) {
-    db.insert(tables.authSession)
-      .values({ key, data: JSON.stringify(session) })
-      .onConflictDoUpdate({ target: tables.authSession.key, set: { data: JSON.stringify(session) } })
-      .run();
-  },
-  async get(key) {
-    const row = db.select().from(tables.authSession).where(eq(tables.authSession.key, key)).get();
-    return row ? (JSON.parse(row.data) as NodeSavedSession) : undefined;
-  },
-  async del(key) {
-    db.delete(tables.authSession).where(eq(tables.authSession.key, key)).run();
-  },
-};
 
 const globalForOauth = globalThis as unknown as { __oauthClient?: NodeOAuthClient };
 
@@ -84,7 +45,34 @@ export function getOAuthClient(): NodeOAuthClient {
         dpop_bound_access_tokens: true,
       };
 
-  const client = new NodeOAuthClient({ clientMetadata, stateStore, sessionStore });
+  const client = new NodeOAuthClient({
+    clientMetadata,
+    stateStore: cookieStateStore,
+    sessionStore: cookieSessionStore,
+  });
   globalForOauth.__oauthClient = client;
   return client;
+}
+
+/**
+ * Some PDS deployments publish an authorization_endpoint on a host with a
+ * broken cookie/CSRF configuration (e.g. climateai.org advertises
+ * auth.climateai.org, whose authorize page always fails CSRF while the
+ * same backend works on the apex). Rewrite known-bad authorize hosts.
+ */
+const AUTHORIZE_HOST_REWRITES: Record<string, string> = {
+  "auth.climateai.org": "climateai.org",
+  ...(process.env.OAUTH_AUTHORIZE_REWRITES
+    ? (JSON.parse(process.env.OAUTH_AUTHORIZE_REWRITES) as Record<string, string>)
+    : {}),
+};
+
+export function fixAuthorizeUrl(url: URL): URL {
+  const replacement = AUTHORIZE_HOST_REWRITES[url.host];
+  if (replacement) {
+    const fixed = new URL(url.toString());
+    fixed.host = replacement;
+    return fixed;
+  }
+  return url;
 }

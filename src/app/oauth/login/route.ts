@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getOAuthClient } from "@/lib/auth/client";
+import { getOAuthClient, fixAuthorizeUrl } from "@/lib/auth/client";
 
 export async function POST(req: NextRequest) {
   const form = await req.formData();
@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
   }
   try {
     const url = await getOAuthClient().authorize(handle);
-    return NextResponse.redirect(url);
+    return NextResponse.redirect(fixAuthorizeUrl(url));
   } catch (err) {
     console.error("oauth authorize failed", err);
     return NextResponse.redirect(new URL("/login?error=resolve", req.url));
