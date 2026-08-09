@@ -32,6 +32,9 @@ export default async function PostPage({ params }: { params: Promise<Params> }) 
   if (!post) notFound();
 
   const sessionDid = await getSessionDid();
+  // pull in comments/votes written on other instances (or by other apps)
+  const { hydrateSubject } = await import("@/lib/ingest/constellation");
+  await hydrateSubject(post.uri).catch(() => {});
   const comments = await getCommentTree(post.uri);
 
   const allCommentUris: string[] = [];
