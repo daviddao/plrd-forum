@@ -1412,3 +1412,128 @@ input[type="text"], input[type="url"], textarea {
   text-decoration: none;
 }
 .diamond:hover { opacity: 0.5 !important; }
+
+/* ============================================================
+   Post editor — port of LW's editPost form
+   (EditTitle: display3/headerStyle @ 3.75rem; PostSubmit buttons)
+   ============================================================ */
+.edit-title {
+  font-family: var(--lw-f-header);
+  font-size: 48.75px; /* LW_POST_TITLE_FONT_SIZE = 3.75rem */
+  font-weight: 400;
+  color: var(--lw-grey-800);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  text-wrap: balance;
+  width: 100%;
+  resize: none;
+  border: none;
+  background: transparent;
+  outline: none;
+  overflow-y: hidden;
+  padding: 0;
+}
+.edit-title::placeholder {
+  color: var(--lw-grey-400);
+}
+
+.edit-body {
+  font-family: var(--lw-f-serif);
+  font-size: 18.2px;
+  line-height: 26px;
+  color: var(--lw-text);
+  width: 100%;
+  min-height: 50vh;
+  resize: none;
+  border: none;
+  background: transparent;
+  outline: none;
+  padding: 0;
+}
+.edit-body::placeholder {
+  color: var(--lw-grey-400);
+}
+
+/* CKEditor-style toolbar */
+.editor-toolbar {
+  position: sticky;
+  top: 72px;
+  z-index: 20;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--lw-paper);
+  border: 1px solid var(--lw-grey-300);
+  border-radius: 4px;
+  padding: 3px 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+.editor-toolbar button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 28px;
+  border: none;
+  background: none;
+  border-radius: 3px;
+  color: var(--lw-grey-700);
+  cursor: pointer;
+  font-family: var(--lw-f-serif);
+  font-size: 15px;
+}
+.editor-toolbar button:hover {
+  background: var(--lw-grey-100);
+  color: var(--lw-text);
+}
+.editor-toolbar .divider {
+  width: 1px;
+  height: 18px;
+  background: var(--lw-grey-300);
+  margin: 0 4px;
+}
+
+/* PostSubmit: right-aligned text buttons, sans 16/500 */
+.editor-submit-row {
+  display: flex;
+  align-items: center;
+  margin-top: 48px;
+  padding-top: 12px;
+}
+.editor-submit-buttons {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+}
+.editor-button {
+  font-family: var(--lw-f-sans);
+  font-size: 16px;
+  font-weight: 500;
+  margin-left: 5px;
+  padding: 8px 16px 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  border: none;
+  background: none;
+  border-radius: 2px;
+  cursor: pointer;
+}
+.editor-button:hover {
+  background: rgba(0, 0, 0, 0.05); /* buttons.hoverGrayHighlight */
+}
+.dark .editor-button:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.editor-button.secondary {
+  color: rgba(0, 0, 0, 0.4); /* text.dim40 */
+}
+.dark .editor-button.secondary {
+  color: rgba(255, 255, 255, 0.4);
+}
+.editor-button.submit {
+  color: var(--lw-primary); /* secondary.main green */
+}
+.editor-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
