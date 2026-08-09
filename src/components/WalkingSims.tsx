@@ -170,12 +170,30 @@ async function renderSim(
   }
 }
 
-// ---- walking loop (port of simocracy-v2 hero.tsx useWalkingSims) ------------
+// ---- wandering loop — sims roam the top-right region (where the hero art
+// used to be), walking in all four directions with LW-art-style placement ----
+
+// DIRECTION_FRAME_SETS from simocracy types: 0=right, 1=back/up, 2=left, 3=front/down
+const DIRECTION_FRAMES: number[][] = [
+  [3, 7, 11, 7], // right
+  [4, 8, 12, 8], // up (back)
+  [2, 6, 10, 6], // left
+  [1, 5, 9, 5], // down (front)
+];
+const DIRECTION_VECTORS: [number, number][] = [
+  [1, 0],
+  [0, -1],
+  [-1, 0],
+  [0, 1],
+];
 
 type SimState = {
   sim: LandingSim;
   x: number;
-  direction: 0 | 2;
+  y: number;
+  direction: 0 | 1 | 2 | 3;
+  paused: boolean;
+  nextTurnTime: number;
   offscreen: HTMLCanvasElement;
   rendered: boolean;
   lastFrame: number;
@@ -183,6 +201,10 @@ type SimState = {
   emoteStartTime: number;
   nextEmoteTime: number;
 };
+
+function pickTurn(nowMs: number): number {
+  return nowMs + 1500 + Math.random() * 3500;
+}
 
 export function WalkingSims({ sims }: { sims: LandingSim[] }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -194,34 +216,38 @@ export function WalkingSims({ sims }: { sims: LandingSim[] }) {
     const container = canvas.parentElement;
     if (!container) return;
 
-    let widthRef = 800;
-    const applySize = (w: number) => {
-      widthRef = w;
+    let W = 480;
+    let H = 420;
+    const applySize = () => {
+      const rect = container.getBoundingClientRect();
+      W = Math.max(200, Math.round(rect.width));
+      H = Math.max(200, Math.round(rect.height));
       const dpr = window.devicePixelRatio || 1;
-      canvas.width = w * dpr;
-      canvas.height = LOGICAL_HEIGHT * dpr;
+      canvas.width = W * dpr;
+      canvas.height = H * dpr;
       const ctx = canvas.getContext("2d");
       if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
-    applySize(container.getBoundingClientRect().width || 800);
-    const ro = new ResizeObserver((entries) => {
-      const w = Math.round(entries[0]?.contentRect.width ?? 0);
-      if (w > 0) applySize(w);
-    });
+    applySize();
+    const ro = new ResizeObserver(() => applySize());
     ro.observe(container);
 
     let emotesAtlas: HTMLImageElement | null = null;
     loadImage("/emotes-atlas.png").then((img) => (emotesAtlas = img));
 
+    const pad = AVATAR_SIZE / 2 + 6;
     const states: SimState[] = sims.map((sim, i) => {
       const offscreen = document.createElement("canvas");
       offscreen.width = AVATAR_SIZE;
       offscreen.height = AVATAR_SIZE;
-      const direction = (Math.random() < 0.5 ? 0 : 2) as 0 | 2;
+      const direction = Math.floor(Math.random() * 4) as 0 | 1 | 2 | 3;
       const state: SimState = {
         sim,
-        x: ((i + 0.5) / sims.length) * widthRef + (Math.random() - 0.5) * 40,
+        x: pad + Math.random() * (W - pad * 2),
+        y: pad + 20 + Math.random() * (H - pad * 2 - 40),
         direction,
+        paused: Math.random() < 0.3,
+        nextTurnTime: Date.now() + 1000 + Math.random() * 3000,
         offscreen,
         rendered: false,
         lastFrame: -1,
@@ -229,7 +255,7 @@ export function WalkingSims({ sims }: { sims: LandingSim[] }) {
         emoteStartTime: 0,
         nextEmoteTime: Date.now() + EMOTE_MIN_INTERVAL + i * 4000 + Math.random() * 3000,
       };
-      const initialFrame = (direction === 0 ? FRAMES_RIGHT : FRAMES_LEFT)[0];
+      const initialFrame = DIRECTION_FRAMES[direction][0];
       renderSim(offscreen, sim, initialFrame).then(() => {
         state.rendered = true;
         state.lastFrame = initialFrame;
@@ -248,19 +274,44 @@ export function WalkingSims({ sims }: { sims: LandingSim[] }) {
       rafId = requestAnimationFrame(animate);
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
-      const pad = AVATAR_SIZE / 2 + 4;
 
       if (now - lastUpdateTime >= UPDATE_DELAY_MS) {
         const nowMs = Date.now();
         for (const s of states) {
-          s.x += s.direction === 0 ? SPEED : -SPEED;
-          if (s.x > widthRef - pad) {
-            s.x = widthRef - pad;
-            s.direction = 2;
-          } else if (s.x < pad) {
-            s.x = pad;
-            s.direction = 0;
+          // occasionally turn to a random direction or pause
+          if (nowMs > s.nextTurnTime) {
+            s.paused = Math.random() < 0.25;
+            s.direction = Math.floor(Math.random() * 4) as 0 | 1 | 2 | 3;
+            s.nextTurnTime = pickTurn(nowMs);
           }
+
+          if (!s.paused) {
+            const [dx, dy] = DIRECTION_VECTORS[s.direction];
+            s.x += dx * SPEED;
+            s.y += dy * SPEED;
+
+            // bounce at region edges: reverse direction
+            if (s.x > W - pad) {
+              s.x = W - pad;
+              s.direction = 2;
+              s.nextTurnTime = pickTurn(nowMs);
+            } else if (s.x < pad) {
+              s.x = pad;
+              s.direction = 0;
+              s.nextTurnTime = pickTurn(nowMs);
+            }
+            if (s.y > H - pad - 16) {
+              s.y = H - pad - 16;
+              s.direction = 1;
+              s.nextTurnTime = pickTurn(nowMs);
+            } else if (s.y < pad + EMOTE_DRAW_SIZE) {
+              s.y = pad + EMOTE_DRAW_SIZE;
+              s.direction = 3;
+              s.nextTurnTime = pickTurn(nowMs);
+            }
+          }
+
+          // emotes
           if (s.emoteId !== null) {
             if (nowMs - s.emoteStartTime > EMOTE_SHOW_DURATION) {
               s.emoteId = null;
@@ -277,12 +328,15 @@ export function WalkingSims({ sims }: { sims: LandingSim[] }) {
 
       if (now - lastFrameTime >= FRAME_DELAY_MS) {
         sharedFrameIndex = (sharedFrameIndex + 1) % 4;
-        ctx.clearRect(0, 0, widthRef, LOGICAL_HEIGHT);
+        ctx.clearRect(0, 0, W, H);
         ctx.imageSmoothingEnabled = false;
 
-        for (const s of states) {
-          const frames = s.direction === 0 ? FRAMES_RIGHT : FRAMES_LEFT;
-          const frame = frames[sharedFrameIndex];
+        // y-sort so lower sims draw in front
+        const ordered = [...states].sort((a, b) => a.y - b.y);
+        for (const s of ordered) {
+          const frames = DIRECTION_FRAMES[s.direction];
+          // paused sims hold the standing frame (index 1 of the set)
+          const frame = s.paused ? frames[1] : frames[sharedFrameIndex];
           if (frame !== s.lastFrame) {
             s.lastFrame = frame;
             renderSim(s.offscreen, s.sim, frame).then(() => {
@@ -291,11 +345,10 @@ export function WalkingSims({ sims }: { sims: LandingSim[] }) {
           }
           if (!s.rendered) continue;
 
-          const y = LOGICAL_HEIGHT - AVATAR_SIZE / 2 - 13;
           ctx.drawImage(
             s.offscreen,
             s.x - AVATAR_SIZE / 2,
-            y - AVATAR_SIZE / 2,
+            s.y - AVATAR_SIZE / 2,
             AVATAR_SIZE,
             AVATAR_SIZE,
           );
@@ -312,7 +365,7 @@ export function WalkingSims({ sims }: { sims: LandingSim[] }) {
               emotesAtlas,
               srcX, srcY, EMOTE_FRAME_SIZE, EMOTE_FRAME_SIZE,
               s.x - EMOTE_DRAW_SIZE / 2,
-              y - AVATAR_SIZE / 2 - EMOTE_DRAW_SIZE - 2,
+              s.y - AVATAR_SIZE / 2 - EMOTE_DRAW_SIZE - 2,
               EMOTE_DRAW_SIZE, EMOTE_DRAW_SIZE,
             );
           }
@@ -324,7 +377,7 @@ export function WalkingSims({ sims }: { sims: LandingSim[] }) {
           ctx.textAlign = "center";
           const label = s.sim.name;
           const labelW = ctx.measureText(label).width + 8;
-          const labelY = y + AVATAR_SIZE / 2 + 2;
+          const labelY = s.y + AVATAR_SIZE / 2 + 2;
           ctx.fillStyle = "rgba(0,0,0,0.45)";
           ctx.fillRect(s.x - labelW / 2, labelY, labelW, 13);
           ctx.fillStyle = "#fff";
@@ -347,12 +400,22 @@ export function WalkingSims({ sims }: { sims: LandingSim[] }) {
   if (sims.length === 0) return null;
 
   return (
-    <div className="pointer-events-none fixed right-0 bottom-0 left-0 z-0" aria-hidden="true">
+    // top-right region where the hero artwork used to live; wide screens only
+    <div
+      className="pointer-events-none fixed z-0 hidden lg:block"
+      aria-hidden="true"
+      style={{
+        top: 96,
+        right: 24,
+        width: "min(34vw, 520px)",
+        height: "min(60vh, 460px)",
+      }}
+    >
       <canvas
         ref={canvasRef}
         style={{
           width: "100%",
-          height: `${LOGICAL_HEIGHT}px`,
+          height: "100%",
           imageRendering: "pixelated",
           display: "block",
         }}
