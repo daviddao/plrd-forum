@@ -1,5 +1,7 @@
 import React from "react";
 import type { Facet, FacetFeature } from "./types";
+import { UserTooltip } from "@/components/UserTooltip";
+import { LinkPreview } from "@/components/LinkPreview";
 
 /**
  * Render leaflet plaintext + facets (byte-indexed, like app.bsky richtext)
@@ -39,10 +41,13 @@ export function RichText({ text, facets }: { text: string; facets?: Facet[] | nu
 function FacetSpan({ features, children }: { features: FacetFeature[]; children: React.ReactNode }) {
   let node = children;
   let href: string | null = null;
+  let mentionDid: string | null = null;
 
   for (const f of features) {
     const t = f.$type;
     if (t === "pub.leaflet.richtext.facet#link" && "uri" in f) href = String(f.uri);
+    else if (t === "pub.leaflet.richtext.facet#didMention" && "did" in f)
+      mentionDid = String(f.did);
     else if (t === "pub.leaflet.richtext.facet#bold") node = <strong>{node}</strong>;
     else if (t === "pub.leaflet.richtext.facet#italic") node = <em>{node}</em>;
     else if (t === "pub.leaflet.richtext.facet#code") node = <code>{node}</code>;
@@ -51,12 +56,27 @@ function FacetSpan({ features, children }: { features: FacetFeature[]; children:
     else if (t === "pub.leaflet.richtext.facet#highlight") node = <mark>{node}</mark>;
   }
 
+  // user mention (e.g. "@flo-bit.dev") — leaflet's didMention facet. Link to
+  // the forum profile and give it the same hover card as author names.
+  if (mentionDid) {
+    const label = typeof children === "string" ? children : String(children ?? "");
+    return (
+      <UserTooltip did={mentionDid} name={label}>
+        <a href={`/users/${mentionDid}`} className="facet-mention">
+          {node}
+        </a>
+      </UserTooltip>
+    );
+  }
+
   if (href) {
+    // LW-style hover previews: post links get the preview card, everything
+    // else gets the URL in the dark tooltip (FM HoverPreviewLink)
     const external = /^https?:\/\//.test(href);
     return (
-      <a href={href} {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}>
+      <LinkPreview href={href} external={external}>
         {node}
-      </a>
+      </LinkPreview>
     );
   }
   return <>{node}</>;

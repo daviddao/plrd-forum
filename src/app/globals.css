@@ -2171,3 +2171,21 @@ input[type="text"], input[type="url"], textarea {
   font-size: 14.3px;
   color: var(--lw-text-dim3);
 }
+
+/* didMention facet — user mention inside post/comment bodies. Post-body
+   links are already green (stylePiping linkStyles); mentions get the same
+   treatment plus a subtle underline on hover only. */
+.facet-mention {
+  color: var(--lw-link);
+  text-decoration: none;
+  font-weight: 500;
+}
+.facet-mention:hover { text-decoration: underline; }
+
+/* mobile: no floating feedback agent — he'd sit on top of the reading column */
+@media (max-width: 640px) {
+  .einstein-button,
+  .einstein-panel {
+    display: none;
+  }
+}

@@ -350,6 +350,108 @@ export async function getPublication(did: string, rkey: string) {
   };
 }
 
+/**
+ * Resolve a link target to an indexed post, for LW-style link hover
+ * previews. Handles:
+ *  - internal links: /posts/<did>/<rkey> (relative or absolute)
+ *  - standard.site publication links: https://<base_path>/<rkey>
+ *    (e.g. https://dholms.leaflet.pub/3mqtqvjidqs2p)
+ */
+export async function findPostForLink(rawUrl: string): Promise<PostListItem | null> {
+  let didAndRkey: { did: string; rkey: string } | null = null;
+  let pubHostRkey: { host: string; rkey: string } | null = null;
+
+  const internalMatch = rawUrl.match(/^\/posts\/([^/]+)\/([^/?#]+)/);
+  if (internalMatch) {
+    didAndRkey = { did: decodeURIComponent(internalMatch[1]), rkey: internalMatch[2] };
+  } else {
+    try {
+      const u = new URL(rawUrl);
+      const postsMatch = u.pathname.match(/^\/posts\/([^/]+)\/([^/?#]+)/);
+      const rkeyMatch = u.pathname.match(/^\/([a-z2-7]{13})\/?$/); // bare TID path
+      if (postsMatch) {
+        didAndRkey = { did: decodeURIComponent(postsMatch[1]), rkey: postsMatch[2] };
+      } else if (rkeyMatch) {
+        pubHostRkey = { host: u.hostname, rkey: rkeyMatch[1] };
+      }
+    } catch {
+      return null;
+    }
+  }
+
+  let row:
+    | { uri: string; did: string; rkey: string; title: string; publishedAt: string | null; wordCount: number; record: unknown }
+    | undefined;
+
+  if (didAndRkey) {
+    row = db
+      .select({
+        uri: tables.posts.uri,
+        did: tables.posts.did,
+        rkey: tables.posts.rkey,
+        title: tables.posts.title,
+        publishedAt: tables.posts.publishedAt,
+        wordCount: tables.posts.wordCount,
+        record: tables.posts.record,
+      })
+      .from(tables.posts)
+      .where(
+        sql`${tables.posts.did} = ${didAndRkey.did} AND ${tables.posts.rkey} = ${didAndRkey.rkey}`,
+      )
+      .get();
+  } else if (pubHostRkey) {
+    // publication whose base_path (stored in the record JSON) is this host.
+    // The table is small — parse in JS rather than LIKE-matching the
+    // (escape-sensitive) serialized JSON.
+    const pub = db
+      .select({ uri: tables.publications.uri, record: tables.publications.record })
+      .from(tables.publications)
+      .all()
+      .find((r) => {
+        try {
+          const p = JSON.parse(r.record as string) as LeafletPublication;
+          return p.base_path === pubHostRkey.host;
+        } catch {
+          return false;
+        }
+      });
+    if (!pub) return null;
+    row = db
+      .select({
+        uri: tables.posts.uri,
+        did: tables.posts.did,
+        rkey: tables.posts.rkey,
+        title: tables.posts.title,
+        publishedAt: tables.posts.publishedAt,
+        wordCount: tables.posts.wordCount,
+        record: tables.posts.record,
+      })
+      .from(tables.posts)
+      .where(
+        sql`${tables.posts.publication} = ${pub.uri} AND ${tables.posts.rkey} = ${pubHostRkey.rkey}`,
+      )
+      .get();
+  }
+  if (!row) return null;
+
+  const karma = getVoteCount(row.uri);
+  const commentCount =
+    db
+      .select({ n: sql<number>`COUNT(*)` })
+      .from(tables.comments)
+      .where(eq(tables.comments.subject, row.uri))
+      .get()?.n ?? 0;
+  const profiles = await getProfiles([row.did]);
+  const { record, ...rest } = row;
+  return {
+    ...rest,
+    karma,
+    commentCount,
+    author: profiles.get(row.did) ?? null,
+    excerpt: recordExcerpt(record),
+  };
+}
+
 /** Live vote count for a subject — used to recompute karma after
  * Constellation hydration (getPost's count predates hydration). */
 export function getVoteCount(subjectUri: string): number {
