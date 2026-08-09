@@ -121,6 +121,32 @@ export async function getPost(did: string, rkey: string) {
   };
 }
 
+/** Resolve a linearDocumentQuote attachment to its quoted text via the post record. */
+function quoteTextFromAttachment(
+  attachment: unknown,
+  doc: LeafletDocument | null,
+): string | null {
+  if (!doc || !attachment || typeof attachment !== "object") return null;
+  const quote = (attachment as { quote?: { start?: { block?: number[]; offset?: number }; end?: { block?: number[]; offset?: number } } }).quote;
+  const start = quote?.start;
+  const end = quote?.end;
+  if (!start?.block || !end?.block) return null;
+  const blocks = doc.pages?.[0]?.blocks ?? [];
+  const text = (i: number) =>
+    ((blocks[i]?.block as { plaintext?: string })?.plaintext ?? "");
+  const s = start.block[0] ?? 0;
+  const e = end.block[0] ?? s;
+  try {
+    if (s === e) return text(s).slice(start.offset ?? 0, end.offset ?? undefined) || null;
+    const parts = [text(s).slice(start.offset ?? 0)];
+    for (let i = s + 1; i < e; i++) parts.push(text(i));
+    parts.push(text(e).slice(0, end.offset ?? undefined));
+    return parts.join(" … ") || null;
+  } catch {
+    return null;
+  }
+}
+
 export async function getCommentTree(subjectUri: string): Promise<CommentNode[]> {
   const rows = db
     .select()
@@ -129,6 +155,30 @@ export async function getCommentTree(subjectUri: string): Promise<CommentNode[]>
     .orderBy(tables.comments.createdAt)
     .all();
   if (rows.length === 0) return [];
+
+  // derive missing quoted text (hydrated records only carry positions)
+  const needsQuote = rows.filter((r) => r.attachment && !r.quotedText);
+  if (needsQuote.length > 0) {
+    const postRow = db
+      .select({ record: tables.posts.record })
+      .from(tables.posts)
+      .where(eq(tables.posts.uri, subjectUri))
+      .get();
+    const doc = postRow ? (JSON.parse(postRow.record as string) as LeafletDocument) : null;
+    for (const r of needsQuote) {
+      const derived = quoteTextFromAttachment(
+        typeof r.attachment === "string" ? JSON.parse(r.attachment) : r.attachment,
+        doc,
+      );
+      if (derived) {
+        r.quotedText = derived.slice(0, 1000);
+        db.update(tables.comments)
+          .set({ quotedText: r.quotedText })
+          .where(eq(tables.comments.uri, r.uri))
+          .run();
+      }
+    }
+  }
 
   const uris = rows.map((r) => r.uri);
   const voteRows = db
