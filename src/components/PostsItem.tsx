@@ -31,9 +31,13 @@ export function PostsItem({ post, showAuthor = true }: { post: PostListItem; sho
           <span className="posts-item-karma">{post.karma}</span>
         </Tooltip>
 
-        <Link href={href} className="posts-item-title">
-          {post.title}
-        </Link>
+        {/* h2 for document outline / agent heading structure;
+            .posts-item-title keeps the exact LW row styling */}
+        <h2 className="posts-item-heading">
+          <Link href={href} className="posts-item-title">
+            {post.title}
+          </Link>
+        </h2>
 
         <span className="posts-item-spacer" />
 

@@ -32,9 +32,9 @@
 
 - MCP server (Streamable HTTP JSON-RPC): `/.well-known/mcp`
   - tools: `get_frontpage`, `get_post`, `list_concepts`
-- OpenAPI description of HTTP endpoints: `/openapi.json`
+- OpenAPI description of HTTP endpoints: `/openapi.json` (stable contract at `/api/v1/*`; errors are RFC 9457 problem+json; rate-limit headers on every API response)
+- API catalog: `/.well-known/api-catalog.json`
 - Sitemap: `/sitemap.xml`
-- Public API base path: `/api/*` — see `/docs` for details.
 
 ## Policies
 

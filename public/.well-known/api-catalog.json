@@ -1,0 +1,28 @@
+{
+  "linkset": [
+    {
+      "anchor": "https://plrd-forum.vercel.app/api/v1/posts",
+      "service-desc": [
+        {
+          "href": "https://plrd-forum.vercel.app/openapi.json",
+          "type": "application/vnd.oai.openapi+json"
+        }
+      ],
+      "service-doc": [
+        {
+          "href": "https://plrd-forum.vercel.app/docs",
+          "type": "text/html"
+        }
+      ]
+    },
+    {
+      "anchor": "https://plrd-forum.vercel.app/.well-known/mcp",
+      "service-desc": [
+        {
+          "href": "https://plrd-forum.vercel.app/docs",
+          "type": "text/html"
+        }
+      ]
+    }
+  ]
+}

@@ -3,16 +3,70 @@
   "info": {
     "title": "PLRD Forum API",
     "summary": "Read and write endpoints for PLRD Forum, a LessWrong-style ATProto forum.",
-    "description": "PLRD Forum stores all content as records in users' ATProto data repositories (site.standard.* lexicons). Read endpoints are public; writes require an ATProto OAuth session and create records in the signed-in user's own PDS. Pages also support markdown content negotiation via Accept: text/markdown, and an MCP server is published at /.well-known/mcp with tools get_frontpage, get_post, and list_concepts.",
+    "description": "PLRD Forum stores all content as records in users' ATProto data repositories (site.standard.* lexicons). Read endpoints are public; writes require an ATProto OAuth session and create records in the signed-in user's own PDS.\n\n## Versioning policy\n\nThe stable contract lives under `/api/v1/`. Additive, backward-compatible changes may occur within v1 without notice; breaking changes require a new major path segment (`/api/v2/`). When an endpoint is deprecated, responses carry IETF `Deprecation` and `Link` headers and a dated `Sunset` header is announced at least 90 days before removal. The unversioned `/api/*` aliases remain available during the deprecation window.\n\n## Errors\n\nAll error responses use RFC 9457 `application/problem+json` with a machine-readable `code`, human-readable `detail`, and a `resolution` hint.\n\n## Rate limits\n\nAPI responses advertise `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset`, and `RateLimit-Policy`; 429 responses include `Retry-After`. The default policy is 120 requests per client IP per 60-second window.\n\n## Other interfaces\n\nPages support markdown content negotiation via `Accept: text/markdown`, and an MCP server is published at `/.well-known/mcp` (Streamable HTTP JSON-RPC) with tools `get_frontpage`, `get_post`, and `list_concepts`.",
     "version": "1.0.0"
   },
   "servers": [{ "url": "https://plrd-forum.vercel.app" }],
+  "tags": [
+    { "name": "read", "description": "Public read endpoints" },
+    { "name": "write", "description": "Authenticated write endpoints (ATProto OAuth)" }
+  ],
   "paths": {
-    "/api/markdown": {
+    "/api/v1/posts": {
+      "get": {
+        "operationId": "listPosts",
+        "summary": "List indexed posts (public JSON)",
+        "tags": ["read"],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": { "type": "integer", "default": 25, "minimum": 1, "maximum": 100 },
+            "description": "Maximum number of posts to return."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Posts ranked by recency with karma and comment counts",
+            "headers": {
+              "RateLimit-Limit": { "$ref": "#/components/headers/RateLimitLimit" },
+              "RateLimit-Remaining": { "$ref": "#/components/headers/RateLimitRemaining" },
+              "RateLimit-Reset": { "$ref": "#/components/headers/RateLimitReset" },
+              "RateLimit-Policy": { "$ref": "#/components/headers/RateLimitPolicy" }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PostList" }
+              }
+            }
+          },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "500": { "$ref": "#/components/responses/ServerError" }
+        }
+      },
+      "post": {
+        "operationId": "createPost",
+        "summary": "Create a post (authenticated)",
+        "description": "Writes a site.standard.document record to the signed-in user's PDS; auto-creates their publication on first post.",
+        "tags": ["write"],
+        "security": [{ "atprotoOAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Post created",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateResult" } } }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
+    "/api/v1/markdown": {
       "get": {
         "operationId": "getPageMarkdown",
         "summary": "Markdown variant of any site page",
         "description": "Equivalent to requesting a page with Accept: text/markdown. Returns text/markdown; responses carry Vary: Accept.",
+        "tags": ["read"],
         "parameters": [
           {
             "name": "path",
@@ -26,85 +80,85 @@
           "200": {
             "description": "Markdown document",
             "content": { "text/markdown": { "schema": { "type": "string" } } }
-          }
+          },
+          "429": { "$ref": "#/components/responses/RateLimited" }
         }
       }
     },
-    "/api/backfill": {
+    "/api/v1/backfill": {
       "post": {
         "operationId": "backfillActor",
         "summary": "Index an actor's ATProto records into the local index",
+        "tags": ["write"],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["actor"],
-                "properties": {
-                  "actor": {
-                    "type": "string",
-                    "description": "Handle or DID, e.g. awarm.space",
-                    "examples": ["awarm.space"]
-                  }
-                }
-              }
+              "schema": { "$ref": "#/components/schemas/BackfillRequest" }
             }
           }
         },
-        "responses": { "200": { "description": "Backfill started/completed" } }
-      }
-    },
-    "/api/posts": {
-      "get": {
-        "operationId": "listPosts",
-        "summary": "List indexed posts (public JSON)",
-        "parameters": [
-          {
-            "name": "limit",
-            "in": "query",
-            "schema": { "type": "number", "default": 25, "maximum": 100 }
-          }
-        ],
         "responses": {
           "200": {
-            "description": "Posts ranked by recency with karma and comment counts",
-            "content": { "application/json": { "schema": { "type": "object" } } }
-          }
+            "description": "Backfill started/completed",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/BackfillResult" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
         }
-      },
-      "post": {
-        "operationId": "createPost",
-        "summary": "Create a post (authenticated)",
-        "description": "Writes a site.standard.document record to the signed-in user's PDS; auto-creates their publication on first post.",
-        "security": [{ "atprotoOAuth": [] }],
-        "responses": { "200": { "description": "Post created" }, "401": { "description": "Not signed in" } }
       }
     },
-    "/api/comments": {
+    "/api/v1/comments": {
       "post": {
         "operationId": "createComment",
-        "summary": "Create a comment or reaction (authenticated)",
+        "summary": "Create a comment or named reaction (authenticated)",
+        "tags": ["write"],
         "security": [{ "atprotoOAuth": [] }],
-        "responses": { "200": { "description": "Comment created" }, "401": { "description": "Not signed in" } }
+        "responses": {
+          "200": {
+            "description": "Comment created",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateResult" } } }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
       }
     },
-    "/api/votes": {
+    "/api/v1/votes": {
       "post": {
         "operationId": "votePost",
         "summary": "Recommend (upvote) a post (authenticated)",
         "description": "Writes a site.standard.graph.recommend record to the user's PDS. Karma equals the number of recommends.",
+        "tags": ["write"],
         "security": [{ "atprotoOAuth": [] }],
-        "responses": { "200": { "description": "Vote recorded" }, "401": { "description": "Not signed in" } }
+        "responses": {
+          "200": {
+            "description": "Vote recorded",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateResult" } } }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
       }
     },
-    "/api/subscriptions": {
+    "/api/v1/subscriptions": {
       "post": {
         "operationId": "subscribeToPublication",
         "summary": "Follow an author/publication (authenticated)",
         "description": "Writes a site.standard.graph.subscription record to the user's PDS.",
+        "tags": ["write"],
         "security": [{ "atprotoOAuth": [] }],
-        "responses": { "200": { "description": "Subscribed" }, "401": { "description": "Not signed in" } }
+        "responses": {
+          "200": {
+            "description": "Subscribed",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateResult" } } }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
       }
     },
     "/.well-known/mcp": {
@@ -112,10 +166,127 @@
         "operationId": "mcpServer",
         "summary": "MCP server (Streamable HTTP JSON-RPC)",
         "description": "Model Context Protocol endpoint exposing read-only tools: get_frontpage, get_post, list_concepts. Send JSON-RPC 2.0 requests (initialize, tools/list, tools/call).",
-        "responses": { "200": { "description": "JSON-RPC response" } }
+        "tags": ["read"],
+        "responses": {
+          "200": {
+            "description": "JSON-RPC 2.0 response",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/JsonRpcResponse" } } }
+          },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
       }
     }
   },
   "webhooks": {},
-  "securitySchemesNote": "Writes use ATProto OAuth (authorization_code + PKCE); no API keys are issued."
+  "components": {
+    "securitySchemes": {
+      "atprotoOAuth": {
+        "type": "oauth2",
+        "description": "ATProto OAuth (authorization code + PKCE) against the user's identity provider; no API keys are issued.",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "https://plrd-forum.vercel.app/oauth/login",
+            "tokenUrl": "https://plrd-forum.vercel.app/oauth/callback",
+            "scopes": {}
+          }
+        }
+      }
+    },
+    "headers": {
+      "RateLimitLimit": { "description": "Requests allowed per window.", "schema": { "type": "string", "example": "120" } },
+      "RateLimitRemaining": { "description": "Requests remaining in the current window.", "schema": { "type": "string", "example": "117" } },
+      "RateLimitReset": { "description": "Unix seconds when the window resets.", "schema": { "type": "string", "example": "1787361600" } },
+      "RateLimitPolicy": { "description": "Policy string, e.g. 120;w=60.", "schema": { "type": "string", "example": "120;w=60" } }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Malformed request",
+        "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/Problem" } } }
+      },
+      "Unauthorized": {
+        "description": "No valid ATProto OAuth session",
+        "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/Problem" } } }
+      },
+      "RateLimited": {
+        "description": "Too many requests — honor Retry-After",
+        "headers": { "Retry-After": { "schema": { "type": "string", "example": "60" } } },
+        "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/Problem" } } }
+      },
+      "ServerError": {
+        "description": "Unexpected server error",
+        "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/Problem" } } }
+      }
+    },
+    "schemas": {
+      "Problem": {
+        "type": "object",
+        "description": "RFC 9457 problem details",
+        "properties": {
+          "type": { "type": "string", "format": "uri-reference" },
+          "title": { "type": "string" },
+          "status": { "type": "integer" },
+          "detail": { "type": "string" },
+          "code": { "type": "string", "description": "Machine-readable error code, e.g. api_route_not_found" },
+          "resolution": { "type": "string", "description": "Concrete hint for fixing the request" },
+          "instance": { "type": "string", "format": "uri-reference" }
+        },
+        "required": ["title", "status"]
+      },
+      "PostSummary": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string" },
+          "url": { "type": "string", "description": "Site-relative post URL, /posts/<did>/<rkey>" },
+          "author": { "type": "string", "description": "Author handle or DID" },
+          "karma": { "type": "integer", "minimum": 0 },
+          "commentCount": { "type": "integer", "minimum": 0 },
+          "publishedAt": { "type": ["string", "null"], "format": "date-time" },
+          "excerpt": { "type": "string" }
+        },
+        "required": ["title", "url", "karma", "commentCount"]
+      },
+      "PostList": {
+        "type": "object",
+        "properties": {
+          "posts": { "type": "array", "items": { "$ref": "#/components/schemas/PostSummary" } }
+        },
+        "required": ["posts"]
+      },
+      "BackfillRequest": {
+        "type": "object",
+        "required": ["actor"],
+        "properties": {
+          "actor": { "type": "string", "description": "Handle or DID, e.g. awarm.space", "examples": ["awarm.space"] }
+        }
+      },
+      "BackfillResult": {
+        "type": "object",
+        "properties": {
+          "indexed": { "type": "integer", "description": "Number of records indexed from the actor's repo." }
+        }
+      },
+      "CreateResult": {
+        "type": "object",
+        "properties": {
+          "uri": { "type": "string", "description": "AT-URI of the created record", "examples": ["at://did:plc:…/site.standard.document/3abc…"] }
+        }
+      },
+      "JsonRpcResponse": {
+        "type": "object",
+        "description": "JSON-RPC 2.0 response object (result or error)",
+        "properties": {
+          "jsonrpc": { "type": "string", "const": "2.0" },
+          "id": {},
+          "result": { "type": "object" },
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": { "type": "integer" },
+              "message": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
 }

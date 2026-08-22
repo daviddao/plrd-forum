@@ -6,40 +6,39 @@ export const metadata = {
     "Developer and agent resources for PLRD Forum: markdown content negotiation, HTTP API, OpenAPI spec, MCP server, llms.txt.",
 };
 
-const endpoints: { method: string; path: string; desc: string }[] = [
   {
     method: "GET",
-    path: "/api/posts?limit=25",
+    path: "/api/v1/posts?limit=25",
     desc: "Public JSON list of indexed posts with karma and comment counts.",
   },
   {
     method: "GET",
-    path: "/api/markdown?path=/…",
+    path: "/api/v1/markdown?path=/…",
     desc: "Markdown variant of any site page (same as Accept: text/markdown).",
   },
   {
     method: "POST",
-    path: "/api/backfill",
+    path: "/api/v1/backfill",
     desc: 'Index an actor\'s ATProto records. Body: {"actor": "handle-or-did"}.',
   },
   {
     method: "POST",
-    path: "/api/posts",
+    path: "/api/v1/posts",
     desc: "Create a post (OAuth session; writes site.standard.document to your PDS).",
   },
   {
     method: "POST",
-    path: "/api/comments",
+    path: "/api/v1/comments",
     desc: "Create a comment or named reaction (OAuth session).",
   },
   {
     method: "POST",
-    path: "/api/votes",
+    path: "/api/v1/votes",
     desc: "Recommend a post — karma equals recommend count (OAuth session).",
   },
   {
     method: "POST",
-    path: "/api/subscriptions",
+    path: "/api/v1/subscriptions",
     desc: "Follow an author/publication (OAuth session).",
   },
 ];

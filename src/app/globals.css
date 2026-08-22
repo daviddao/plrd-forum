@@ -331,7 +331,18 @@ body {
 }
 
 /* title: postsItemTitle — warnock-pro 16.9px/23.4px, text.normal */
+/* heading wrapper around the title link — neutral so the row looks identical
+   to LW while giving agents a proper h1→h2 document outline */
+.posts-item-heading {
+  margin: 0;
+  min-width: 0;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+}
+
 .posts-item-title {
+  display: block;
   font-family: var(--lw-f-serif);
   font-size: 16.9px;
   font-weight: 400;

@@ -139,7 +139,11 @@ export async function POST(req: NextRequest) {
     jsonrpc?: string;
     id?: unknown;
     method?: string;
-    params?: { name?: string; arguments?: Record<string, unknown> };
+    params?: {
+      name?: string;
+      arguments?: Record<string, unknown>;
+      protocolVersion?: string;
+    };
   };
   try {
     body = await req.json();
@@ -152,7 +156,11 @@ export async function POST(req: NextRequest) {
   switch (method) {
     case "initialize":
       return jsonRpcResult(id, {
-        protocolVersion: req.headers.get("mcp-protocol-version") ?? PROTOCOL_VERSION,
+        // echo the client's requested version when we support it
+        protocolVersion:
+          params?.protocolVersion === "2025-03-26" || params?.protocolVersion === "2025-06-18"
+            ? params.protocolVersion
+            : PROTOCOL_VERSION,
         capabilities: { tools: {} },
         serverInfo: SERVER_INFO,
       });

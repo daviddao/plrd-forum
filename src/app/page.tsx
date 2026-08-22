@@ -65,10 +65,21 @@ export default async function HomePage() {
           <Link href="/allPosts" className="text-link"> All Posts</Link> browses everything
           chronologically; <Link href="/concepts" className="text-link">Concepts</Link> groups
           posts by tag; and the <Link href="/library" className="text-link">Library</Link> lists
-          publications (blogs) with their theme colors. Agents can read any page
-          as markdown via content negotiation, or start at{" "}
-          <Link href="/docs" className="text-link">/docs</Link> for machine-readable
-          endpoints, an OpenAPI description, and an MCP server.
+          publications (blogs) with their theme colors. Karma is positive-only and
+          equals the number of recommend records on a post. Comments thread through
+          parent links, and reactions are short-form comments with named labels like
+          "Agreed" or "Insightful", in the LessWrong tradition.
+        </p>
+        <h3 className="serif-title mt-6 text-[17px]">For agents and developers</h3>
+        <p className="text-[15.08px] leading-[1.55] text-text-dim2">
+          PLRD Forum is deliberately machine-readable. Every page can be fetched as
+          markdown by sending an <code className="rounded bg-grey-100 px-1 text-[13px]">Accept: text/markdown</code>{" "}
+          header; there is a public JSON API under <Link href="/docs" className="text-link">/docs</Link>,
+          an OpenAPI description at <code className="rounded bg-grey-100 px-1 text-[13px]">/openapi.json</code>,
+          agent instructions at <code className="rounded bg-grey-100 px-1 text-[13px]">/llms.txt</code>,
+          and a read-only MCP server at{" "}
+          <code className="rounded bg-grey-100 px-1 text-[13px]">/.well-known/mcp</code> with tools
+          for listing posts, reading a full post, and listing concepts.
         </p>
       </section>
     </div>
