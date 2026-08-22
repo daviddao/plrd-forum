@@ -499,14 +499,17 @@ export function WalkingSims({ sims }: { sims: LandingSim[] }) {
   if (sims.length === 0) return null;
 
   return (
-    // top-right region where the hero artwork used to live; wide screens only
+    // top-right gutter only — the region is clamped to the empty space beside
+    // the centered 765px content column (column half-width + padding + margin
+    // ≈ 430px from the viewport edge), so sims never wander over text. Hidden
+    // below 1200px where that gutter gets too thin.
     <div
-      className="pointer-events-none fixed z-0 hidden lg:block"
+      className="pointer-events-none fixed z-0 hidden min-[1200px]:block"
       aria-hidden="true"
       style={{
         top: 96,
-        right: 24,
-        width: "min(34vw, 520px)",
+        right: 12,
+        width: "min(520px, calc(50vw - 430px))",
         height: "min(60vh, 460px)",
       }}
     >
