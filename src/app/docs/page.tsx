@@ -6,6 +6,7 @@ export const metadata = {
     "Developer and agent resources for PLRD Forum: markdown content negotiation, HTTP API, OpenAPI spec, MCP server, llms.txt.",
 };
 
+const endpoints: { method: string; path: string; desc: string }[] = [
   {
     method: "GET",
     path: "/api/v1/posts?limit=25",
