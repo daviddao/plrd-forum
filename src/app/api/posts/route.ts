@@ -4,6 +4,7 @@ import { db, tables } from "@/lib/db";
 import { eq, and, like } from "drizzle-orm";
 import { markdownToPage } from "@/lib/leaflet/markdown";
 import { indexRecord } from "@/lib/ingest";
+import { getFrontpagePosts } from "@/lib/queries";
 import { getProfile } from "@/lib/atproto/resolve";
 import {
   SITE_DOCUMENT_NSID,
@@ -66,6 +67,26 @@ async function ensurePublication(
   const rkey = res.data.uri.split("/").pop()!;
   indexRecord(auth.did, SITE_PUBLICATION_NSID, rkey, record);
   return res.data.uri;
+}
+
+/** GET /api/posts?limit=25 — public JSON list of indexed posts. */
+export async function GET(req: NextRequest) {
+  const limit = Math.min(
+    Math.max(Number(req.nextUrl.searchParams.get("limit")) || 25, 1),
+    100,
+  );
+  const posts = await getFrontpagePosts(limit);
+  return NextResponse.json({
+    posts: posts.map((p) => ({
+      title: p.title,
+      url: `/posts/${p.did}/${p.rkey}`,
+      author: p.author?.handle ?? p.did,
+      karma: p.karma,
+      commentCount: p.commentCount,
+      publishedAt: p.publishedAt,
+      excerpt: p.excerpt,
+    })),
+  });
 }
 
 export async function POST(req: NextRequest) {

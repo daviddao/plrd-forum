@@ -1,0 +1,44 @@
+# PLRD Forum
+
+> A LessWrong-style discussion forum built on ATProto (the Bluesky protocol).
+> Every post, comment, vote, and reaction is a record in the author's own data
+> repository (PDS), published with the open `site.standard.*` lexicons. The
+> site is an index that aggregates those records.
+
+## When to use PLRD Forum
+
+- You want to read or discuss research-adjacent writing in a LessWrong-style
+  community, without locking content into a private database.
+- You are an ATProto user who wants your posts stored in *your* PDS and remain
+  portable to other apps (leaflet.pub records appear here too).
+- You want a worked example of an ATProto-native web app: OAuth login,
+  Jetstream ingestion, lexicon-driven data, karma via `site.standard.graph.recommend`.
+- Not for: real-time chat, private discussions, or content you do not want public.
+
+## How to read PLRD Forum as an agent
+
+- Send `Accept: text/markdown` with any request and every page returns its
+  markdown variant (`text/markdown; charset=utf-8`, with `Vary: Accept`).
+- Key pages:
+  - `/` — frontpage ranked by karma
+  - `/allPosts` — everything chronologically
+  - `/concepts` — posts grouped by tag (`/concepts/<tag>` for one tag)
+  - `/library` — publications (blogs)
+  - `/posts/<did>/<rkey>` — a single post
+  - `/users/<actor>` — an author profile (handle or DID)
+  - `/about`, `/contact`, `/privacy`
+
+## Machine interfaces
+
+- MCP server (Streamable HTTP JSON-RPC): `/.well-known/mcp`
+  - tools: `get_frontpage`, `get_post`, `list_concepts`
+- OpenAPI description of HTTP endpoints: `/openapi.json`
+- Sitemap: `/sitemap.xml`
+- Public API base path: `/api/*` — see `/docs` for details.
+
+## Policies
+
+- Sign-in uses ATProto OAuth; we never see app passwords. One session cookie
+  holds your DID. No analytics, no trackers.
+- To remove content from this index, delete it at the source PDS, or email
+  research@protocol.ai.

@@ -43,6 +43,34 @@ export default async function HomePage() {
         </div>
       )}
       </div>
+
+      <section
+        className="relative z-10 mt-12 border-t-2 px-1 pt-8"
+        style={{ borderColor: "var(--lw-item-separator)" }}
+      >
+        <h2 className="serif-title text-[22px]">About PLRD Forum</h2>
+        <p className="post-body mt-3">
+          PLRD Forum is a reading and discussion community in the style of
+          LessWrong, built on the AT Protocol. Instead of locking content into a
+          private database, every post, comment, vote, and reaction here is a
+          record in the author's own data repository (PDS), published with the
+          open <code className="rounded bg-grey-100 px-1 text-[13px]">site.standard.*</code>{" "}
+          lexicons. Sign in with your Bluesky handle and you can write posts,
+          comment, and vote — the records stay yours, portable to any other
+          ATProto app.
+        </p>
+        <h3 className="serif-title mt-6 text-[17px]">Browsing without an account</h3>
+        <p className="text-[15.08px] leading-[1.55] text-text-dim2">
+          No login is needed to read. The frontpage ranks recent posts by karma;
+          <Link href="/allPosts" className="text-link"> All Posts</Link> browses everything
+          chronologically; <Link href="/concepts" className="text-link">Concepts</Link> groups
+          posts by tag; and the <Link href="/library" className="text-link">Library</Link> lists
+          publications (blogs) with their theme colors. Agents can read any page
+          as markdown via content negotiation, or start at{" "}
+          <Link href="/docs" className="text-link">/docs</Link> for machine-readable
+          endpoints, an OpenAPI description, and an MCP server.
+        </p>
+      </section>
     </div>
   );
 }

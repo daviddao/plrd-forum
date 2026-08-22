@@ -10,6 +10,8 @@ const nextConfig: NextConfig = {
   },
   async rewrites() {
     return [
+      // MCP server published at the well-known location (handler: /api/mcp)
+      { source: "/.well-known/mcp", destination: "/api/mcp" },
       // Pipoya sprite layers are served from simocracy.org (full set: all
       // character sets × 12 animation frames × all part folders, ~60MB)
       // instead of vendoring them into this repo.

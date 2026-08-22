@@ -1,0 +1,121 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "PLRD Forum API",
+    "summary": "Read and write endpoints for PLRD Forum, a LessWrong-style ATProto forum.",
+    "description": "PLRD Forum stores all content as records in users' ATProto data repositories (site.standard.* lexicons). Read endpoints are public; writes require an ATProto OAuth session and create records in the signed-in user's own PDS. Pages also support markdown content negotiation via Accept: text/markdown, and an MCP server is published at /.well-known/mcp with tools get_frontpage, get_post, and list_concepts.",
+    "version": "1.0.0"
+  },
+  "servers": [{ "url": "https://plrd-forum.vercel.app" }],
+  "paths": {
+    "/api/markdown": {
+      "get": {
+        "operationId": "getPageMarkdown",
+        "summary": "Markdown variant of any site page",
+        "description": "Equivalent to requesting a page with Accept: text/markdown. Returns text/markdown; responses carry Vary: Accept.",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string", "examples": ["/"] },
+            "description": "Site path to render as markdown, e.g. /, /allPosts, /posts/<did>/<rkey>."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Markdown document",
+            "content": { "text/markdown": { "schema": { "type": "string" } } }
+          }
+        }
+      }
+    },
+    "/api/backfill": {
+      "post": {
+        "operationId": "backfillActor",
+        "summary": "Index an actor's ATProto records into the local index",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["actor"],
+                "properties": {
+                  "actor": {
+                    "type": "string",
+                    "description": "Handle or DID, e.g. awarm.space",
+                    "examples": ["awarm.space"]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Backfill started/completed" } }
+      }
+    },
+    "/api/posts": {
+      "get": {
+        "operationId": "listPosts",
+        "summary": "List indexed posts (public JSON)",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": { "type": "number", "default": 25, "maximum": 100 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Posts ranked by recency with karma and comment counts",
+            "content": { "application/json": { "schema": { "type": "object" } } }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createPost",
+        "summary": "Create a post (authenticated)",
+        "description": "Writes a site.standard.document record to the signed-in user's PDS; auto-creates their publication on first post.",
+        "security": [{ "atprotoOAuth": [] }],
+        "responses": { "200": { "description": "Post created" }, "401": { "description": "Not signed in" } }
+      }
+    },
+    "/api/comments": {
+      "post": {
+        "operationId": "createComment",
+        "summary": "Create a comment or reaction (authenticated)",
+        "security": [{ "atprotoOAuth": [] }],
+        "responses": { "200": { "description": "Comment created" }, "401": { "description": "Not signed in" } }
+      }
+    },
+    "/api/votes": {
+      "post": {
+        "operationId": "votePost",
+        "summary": "Recommend (upvote) a post (authenticated)",
+        "description": "Writes a site.standard.graph.recommend record to the user's PDS. Karma equals the number of recommends.",
+        "security": [{ "atprotoOAuth": [] }],
+        "responses": { "200": { "description": "Vote recorded" }, "401": { "description": "Not signed in" } }
+      }
+    },
+    "/api/subscriptions": {
+      "post": {
+        "operationId": "subscribeToPublication",
+        "summary": "Follow an author/publication (authenticated)",
+        "description": "Writes a site.standard.graph.subscription record to the user's PDS.",
+        "security": [{ "atprotoOAuth": [] }],
+        "responses": { "200": { "description": "Subscribed" }, "401": { "description": "Not signed in" } }
+      }
+    },
+    "/.well-known/mcp": {
+      "post": {
+        "operationId": "mcpServer",
+        "summary": "MCP server (Streamable HTTP JSON-RPC)",
+        "description": "Model Context Protocol endpoint exposing read-only tools: get_frontpage, get_post, list_concepts. Send JSON-RPC 2.0 requests (initialize, tools/list, tools/call).",
+        "responses": { "200": { "description": "JSON-RPC response" } }
+      }
+    }
+  },
+  "webhooks": {},
+  "securitySchemesNote": "Writes use ATProto OAuth (authorization_code + PKCE); no API keys are issued."
+}
