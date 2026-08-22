@@ -20,6 +20,12 @@ const SERVER_INFO = {
   version: "1.0.0",
 };
 
+const INSTRUCTIONS =
+  "Read-only MCP server for PLRD Forum, a LessWrong-style ATProto forum. " +
+  "Use get_frontpage to list recent posts with karma and URLs, get_post to " +
+  "read a full post as markdown (did + rkey come from /posts/<did>/<rkey> " +
+  "URLs), and list_concepts to enumerate tags.";
+
 const TOOLS = [
   {
     name: "get_frontpage",
@@ -156,13 +162,14 @@ export async function POST(req: NextRequest) {
   switch (method) {
     case "initialize":
       return jsonRpcResult(id, {
-        // echo the client's requested version when we support it
+        // this server is protocol-version agnostic — echo the client's request
         protocolVersion:
-          params?.protocolVersion === "2025-03-26" || params?.protocolVersion === "2025-06-18"
+          typeof params?.protocolVersion === "string"
             ? params.protocolVersion
             : PROTOCOL_VERSION,
         capabilities: { tools: {} },
         serverInfo: SERVER_INFO,
+        instructions: INSTRUCTIONS,
       });
     case "notifications/initialized":
       return new Response(null, { status: 202 });

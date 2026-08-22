@@ -59,6 +59,23 @@ export default async function HomePage() {
           comment, and vote — the records stay yours, portable to any other
           ATProto app.
         </p>
+        <p className="post-body mt-3">
+          The site itself is only an index over the ATProto network. It watches
+          the firehose and aggregates public records from authors who post here
+          or who have been backfilled by an administrator. Delete a record at
+          the source PDS and it disappears from this index too; your identity
+          is your decentralized identifier (DID), so there is no separate
+          forum password to manage.
+        </p>
+        <h2 className="serif-title mt-8 text-[22px]">How the forum works</h2>
+        <p className="post-body mt-3">
+          Karma is positive-only and equals the number of recommend records on
+          a post — there is no downvoting, in keeping with the LessWrong
+          tradition of rewarding good-faith writing. Comments thread through
+          parent links, and reactions are short-form comments with named
+          labels like "Agreed", "Insightful", or "Confusing", rendered with
+          LessWrong's reaction icons.
+        </p>
         <h3 className="serif-title mt-6 text-[17px]">Browsing without an account</h3>
         <p className="text-[15.08px] leading-[1.55] text-text-dim2">
           No login is needed to read. The frontpage ranks recent posts by karma;

@@ -41,6 +41,12 @@ export function middleware(req: NextRequest) {
 
   if (pathname.startsWith("/api")) {
     const { headers, limited } = rateLimit(req);
+    // unversioned aliases are deprecated in favor of /api/v1/* (RFC 9745)
+    if (!pathname.startsWith("/api/v1") && !pathname.startsWith("/.well-known")) {
+      headers["Deprecation"] = "@1767225600"; // 2026-01-01
+      headers["Link"] = '</api/v1/posts>; rel="successor-version"';
+      headers["Sunset"] = "Sat, 01 Jan 2027 00:00:00 GMT";
+    }
     if (limited) {
       return new Response(null, {
         status: 429,
