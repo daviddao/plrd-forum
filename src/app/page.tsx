@@ -1,20 +1,14 @@
 import Link from "next/link";
 import { getFrontpagePosts } from "@/lib/queries";
-import { getLandingSims } from "@/lib/sims";
 import { PostsItem } from "@/components/PostsItem";
-import { WalkingSims } from "@/components/WalkingSims";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const [posts, sims] = await Promise.all([
-    getFrontpagePosts(50),
-    getLandingSims(7),
-  ]);
+  const posts = await getFrontpagePosts(50);
 
   return (
     <div>
-      <WalkingSims sims={sims} />
       <div className="section-title relative z-10">
         <h1>Latest Posts</h1>
         <Link
