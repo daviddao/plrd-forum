@@ -1987,19 +1987,25 @@ input[type="text"], input[type="url"], textarea {
   flex-direction: column;
   word-break: break-word;
   z-index: 10;
+  /* MultiToCLayout.tsx stickyBlockScroller: scroll long outlines. */
+  overflow-y: auto;
+  scrollbar-width: none;
 }
+.fixed-toc::-webkit-scrollbar { width: 0; }
 @media (max-width: 1279px) {
   .fixed-toc { display: none; } /* breakpoints.down('sm') hides; we cut at xl */
 }
 /* MultiToCLayout: `&:has($toc:hover) .ToCRowHover { opacity: 1 }` */
-.fixed-toc:hover .toc-rowOpacity { opacity: 1; }
+.fixed-toc:hover .toc-rowOpacity,
+.fixed-toc:focus-within .toc-rowOpacity { opacity: 1; }
 
 /* FixedPositionToC wrapper: progress bar + rows side by side */
 .fixed-toc-wrapper {
   display: flex;
   flex-direction: row;
   flex-grow: 1;
-  min-height: 0;
+  /* FixedPositionToC.tsx wrapper retains its intrinsic content height. */
+  min-height: min-content;
 }
 /* progressBarContainer: width 1, grey[400], overflow clip */
 .fixed-toc-progress {
@@ -2010,6 +2016,7 @@ input[type="text"], input[type="url"], textarea {
   --windowHeight: 0px;
   margin-right: -4px;
   width: 1px;
+  flex-shrink: 0;
   background: var(--lw-grey-400);
   overflow-y: clip;
 }
@@ -2035,14 +2042,16 @@ input[type="text"], input[type="url"], textarea {
   display: flex;
   flex-direction: column;
   flex-grow: 1;
-  min-height: 0;
+  min-width: 0;
 }
 .toc-rowWrapper {
   position: relative;
   z-index: 1;
   display: flex;
   flex-direction: column;
-  min-height: 0;
+  /* FixedPositionToC.tsx rowWrapper uses the automatic content minimum.
+     Zero lets proportional flex scales crush wrapped labels into each other. */
+  min-height: auto;
 }
 .toc-rowDotContainer {
   display: flex;
@@ -2076,14 +2085,10 @@ input[type="text"], input[type="url"], textarea {
   padding-bottom: 6px;
   font-family: var(--lw-f-sans);
   font-size: 14.3px; /* body2 1.1rem */
-  line-height: 1.1em;
+  line-height: 1em; /* TableOfContentsRow.tsx link */
   color: var(--lw-grey-600);
   text-decoration: none;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  /* TableOfContentsRow.tsx keeps the full label in normal block flow. */
 }
 .toc-link:hover,
 .toc-link.highlighted {
@@ -2096,7 +2101,6 @@ input[type="text"], input[type="url"], textarea {
   font-size: 16.9px;
   padding-top: 3px;
   padding-bottom: 12px;
-  -webkit-line-clamp: 3;
 }
 /* indent levels (TableOfContentsRow level2/level3) */
 .toc-level1 { padding-left: 0; }

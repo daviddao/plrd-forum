@@ -21,7 +21,15 @@ backfill before serving requests so Vercel's first response includes the posts.
 The imported article "How PL R&D Accelerates Breakthroughs" lives at
 `at://did:plc:pgwr6hkosgznfl5nz7egajei/site.standard.document/3mvpjxrgssq2m`.
 It uses Leaflet blocks with PDS-hosted images and preserves the original byline,
-publication date, and source link. Do not publish a duplicate when reseeding.
+publication date, and source link. The second imported article, "Programmable
+Economies & Governance: Upgrading Society's Operating System", lives at
+`at://did:plc:pgwr6hkosgznfl5nz7egajei/site.standard.document/3mvpnbj3e3g2b`.
+Its SVG diagram is a PDS image; the live dashboard remains a link.
+"Neurotech as a Frontier for Human Flourishing" lives at
+`at://did:plc:pgwr6hkosgznfl5nz7egajei/site.standard.document/3mvpnrdmcqi2s`.
+Use the live September 9 article as its source, not the older unlisted
+`preview-neurotech-ea88a298` draft in the sibling repo.
+Do not publish duplicates when reseeding.
 
 ## The prime directive: style fidelity
 
@@ -83,7 +91,9 @@ Rendering is ported from simocracy-v2's `lib/sprites/codex-pet.ts`.
 Post pages hide the nav sidebar; the left rail is `TableOfContents` — a port of
 FM's `FixedPositionToC` (dots + 1px reading-progress bar always visible, labels
 fade in on rail hover, rows flex-scaled to section heights, viewport-center
-scroll highlight). Heading anchors use LW's underscore scheme (`headingAnchor`
+scroll highlight). Keep row minimum heights content-sized and the rail scrollable,
+as in FM's `rowWrapper` and `stickyBlockScroller`. `min-height: 0` on rows makes
+nearby headings overlap; line-clamping hides long labels. Heading anchors use LW's underscore scheme (`headingAnchor`
 in `src/lib/leaflet/toc.ts`, ids emitted by the block renderer). Author names
 get `UserTooltip` (port of `LWUserTooltipContent`/`UserMetaInfo`), lazy-loaded
 via `/api/author-card` on first hover.
