@@ -35,3 +35,7 @@ npm run dev   # http://127.0.0.1:3457
 ```
 
 `.env.local`: `SESSION_SECRET`, `PUBLIC_URL` (loopback OAuth in dev; set your https URL in prod), optional `NEXT_PUBLIC_TYPEKIT_ID`, `NEXT_PUBLIC_SITE_NAME`.
+
+Set `SEED_ACTORS=plrd.org` locally and in production to load PL R&D's published
+ATProto articles into an empty index before the first request. This only reads
+existing PDS records; it does not publish or duplicate posts.

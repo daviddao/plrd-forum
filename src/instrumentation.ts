@@ -3,8 +3,8 @@ export async function register() {
     const { startJetstream } = await import("@/lib/ingest/jetstream");
     startJetstream();
 
-    // On ephemeral hosts (Vercel lambdas) the SQLite index starts empty on
-    // every cold start — seed it from known leaflet authors in the background.
+    // Seed an empty ephemeral index before accepting requests. Background
+    // work can be suspended by Vercel after the first response.
     const seedActors = (process.env.SEED_ACTORS ?? "")
       .split(",")
       .map((s) => s.trim())
@@ -16,16 +16,14 @@ export async function register() {
       if (!row?.n) {
         const { backfillActor } = await import("@/lib/ingest/backfill");
         const { resolveHandleToDid } = await import("@/lib/atproto/resolve");
-        void (async () => {
-          for (const actor of seedActors) {
-            try {
-              const did = await resolveHandleToDid(actor);
-              if (did) await backfillActor(did);
-            } catch {
-              // seeding is best-effort
-            }
+        for (const actor of seedActors) {
+          try {
+            const did = await resolveHandleToDid(actor);
+            if (did) await backfillActor(did);
+          } catch (error) {
+            console.warn(`Failed to seed ${actor}`, error);
           }
-        })();
+        }
       }
     }
   }

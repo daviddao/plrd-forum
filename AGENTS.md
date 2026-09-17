@@ -14,7 +14,14 @@ npm run build   # production build — run before committing
 npx tsc --noEmit
 ```
 
-Seed content: `curl -X POST localhost:3457/api/backfill -H 'Content-Type: application/json' -d '{"actor":"awarm.space"}'`
+Seed content: `curl -X POST localhost:3457/api/backfill -H 'Content-Type: application/json' -d '{"actor":"plrd.org"}'`
+
+Set `SEED_ACTORS=plrd.org` to seed an empty index on startup. `register()` awaits
+backfill before serving requests so Vercel's first response includes the posts.
+The imported article "How PL R&D Accelerates Breakthroughs" lives at
+`at://did:plc:pgwr6hkosgznfl5nz7egajei/site.standard.document/3mvpjxrgssq2m`.
+It uses Leaflet blocks with PDS-hosted images and preserves the original byline,
+publication date, and source link. Do not publish a duplicate when reseeding.
 
 ## The prime directive: style fidelity
 
