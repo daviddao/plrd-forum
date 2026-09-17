@@ -34,11 +34,18 @@ type PreviewState = PreviewData | "loading" | "none";
 const previewCache = new Map<string, PreviewData | null>();
 
 function WebsitePreview({ site }: { site: WebsiteData }) {
+  const [failedImage, setFailedImage] = useState<string | null>(null);
+
   return (
     <div className="website-preview">
-      {site.image && (
+      {site.image && site.image !== failedImage && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={site.image} alt="" className="website-preview-image" />
+        <img
+          src={site.image}
+          alt=""
+          className="website-preview-image"
+          onError={() => setFailedImage(site.image)}
+        />
       )}
       <div className="website-preview-body">
         <div className="website-preview-domain">{site.siteName ?? site.domain}</div>
