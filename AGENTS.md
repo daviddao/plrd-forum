@@ -104,6 +104,13 @@ Quote anchors: the block renderer emits `data-block-idx` on each block; `Selecti
 
 - **`better-sqlite3` connection is cached on `globalThis`** — schema changes need a dev-server restart (hot reload keeps the old connection and skips new DDL).
 - **`allowedDevOrigins: ["127.0.0.1"]`** in next.config.ts is required; without it Next blocks its own JS chunks and nothing hydrates.
+- **Email login is the default** on `/login`; ATProto handle login is a
+  collapsible alternative. Set `EPDS_URL=https://certified.one` locally and
+  in production. `/oauth/login` authorizes the configured ePDS service URL,
+  then adds `login_hint` and `prompt=login` to the redirect, as in simocracy-v2.
+  Both methods share the SDK callback and DID session. Do not log email hints
+  or authorization URLs. The provider may auto-send an OTP when its page's
+  JavaScript runs; smoke-test redirect/HTML without sending unsolicited codes.
 - **OAuth in dev is a loopback client** (`http://localhost?redirect_uri=…`); `PUBLIC_URL` must match the URL you browse on (127.0.0.1:3457). In prod set `PUBLIC_URL=https://…` and metadata is served from `/client-metadata.json`.
 - **Vercel deploys are demo-grade**: set `DATABASE_PATH=/tmp/forum.db` — the filesystem is ephemeral, so the index resets between cold starts and Jetstream doesn't run persistently. A real deployment needs a persistent host (Fly/Railway/VPS) or swapping SQLite for a hosted DB.
 - **Deploys go through GitHub Actions, not the Vercel git integration.** The Vercel GitHub App is NOT installed on the `protocol` GitHub org (the Vercel team's GitHub connection is a different personal account), so `vercel git connect` fails and pushes alone do NOT deploy. `.github/workflows/deploy.yml` runs `vercel deploy --prod` on every push to `main` using the `VERCEL_TOKEN` / `VERCEL_ORG_ID` / `VERCEL_PROJECT_ID` repo secrets. Manual deploys: `npx vercel --prod` (project link in `.vercel/project.json`, team `protocol`). `NEXT_PUBLIC_SITE_NAME` is inlined at build time — changing it on Vercel requires a redeploy. If the Vercel GitHub App is ever installed on the org, delete the workflow in favor of the native integration.

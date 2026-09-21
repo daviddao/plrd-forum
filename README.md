@@ -34,7 +34,17 @@ npm install
 npm run dev   # http://127.0.0.1:3457
 ```
 
-`.env.local`: `SESSION_SECRET`, `PUBLIC_URL` (loopback OAuth in dev; set your https URL in prod), optional `NEXT_PUBLIC_TYPEKIT_ID`, `NEXT_PUBLIC_SITE_NAME`.
+`.env.local`: `SESSION_SECRET`, `PUBLIC_URL` (loopback OAuth in dev; set your https URL in prod), `EPDS_URL=https://certified.one` for email sign-in, optional `NEXT_PUBLIC_TYPEKIT_ID`, `NEXT_PUBLIC_SITE_NAME`.
+
+Email is the default login method. The ePDS provider verifies the email and
+handles account creation. Existing ATProto users can expand "Use an ATProto
+handle instead". Both paths use the same ATProto OAuth client and callback;
+the forum stores the authenticated DID, not the email. If `EPDS_URL` is unset,
+email login shows an unavailable message and handle login still works.
+
+With the server running, test both login paths with
+`LOGIN_TEST_BASE_URL=http://127.0.0.1:3457 npm run test:login`.
+The tests stop at OAuth redirects and do not send verification emails.
 
 Set `SEED_ACTORS=plrd.org` locally and in production to load PL R&D's published
 ATProto articles into an empty index before the first request. This only reads
