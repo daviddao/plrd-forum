@@ -2,13 +2,12 @@ import { getIronSession, type SessionOptions } from "iron-session";
 import { cookies } from "next/headers";
 import { Agent } from "@atproto/api";
 import { getOAuthClient } from "./client";
+import { getSessionSecret } from "./secret";
 
 export type SessionData = { did?: string };
 
-const sessionOptions: SessionOptions = {
+const sessionOptions: Omit<SessionOptions, "password"> = {
   cookieName: "plrd_forum_sid",
-  password:
-    process.env.SESSION_SECRET ?? "complex_password_at_least_32_characters_long_dev_only",
   cookieOptions: {
     secure: process.env.NODE_ENV === "production",
     httpOnly: true,
@@ -18,7 +17,10 @@ const sessionOptions: SessionOptions = {
 
 export async function getSession() {
   const cookieStore = await cookies();
-  return getIronSession<SessionData>(cookieStore, sessionOptions);
+  return getIronSession<SessionData>(cookieStore, {
+    ...sessionOptions,
+    password: getSessionSecret(),
+  });
 }
 
 /** DID of the logged-in user, or null. */

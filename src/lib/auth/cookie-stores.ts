@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { sealData, unsealData } from "iron-session";
+import { getSessionSecret } from "./secret";
 import type {
   NodeSavedSession,
   NodeSavedSessionStore,
@@ -19,8 +20,6 @@ import type {
  * still succeeds in-memory; the next API request persists it).
  */
 
-const SECRET =
-  process.env.SESSION_SECRET ?? "complex_password_at_least_32_characters_long_dev_only";
 const CHUNK = 3500;
 const MAX_CHUNKS = 4;
 
@@ -65,7 +64,7 @@ async function deleteChunked(prefix: string) {
 /** Short-lived PAR/authorize state (one active login flow per browser). */
 export const cookieStateStore: NodeSavedStateStore = {
   async set(_key, state) {
-    const sealed = await sealData({ key: _key, state }, { password: SECRET, ttl: 3600 });
+    const sealed = await sealData({ key: _key, state }, { password: getSessionSecret(), ttl: 3600 });
     await writeChunked("plrd_oauth_state", sealed, 3600);
   },
   async get(key) {
@@ -73,7 +72,7 @@ export const cookieStateStore: NodeSavedStateStore = {
     if (!raw) return undefined;
     try {
       const data = await unsealData<{ key: string; state: NodeSavedState }>(raw, {
-        password: SECRET,
+        password: getSessionSecret(),
       });
       return data.key === key ? data.state : undefined;
     } catch {
@@ -92,10 +91,11 @@ export const cookieStateStore: NodeSavedStateStore = {
 /** OAuth token set + DPoP key for the logged-in DID. */
 export const cookieSessionStore: NodeSavedSessionStore = {
   async set(key, session) {
+    const password = getSessionSecret();
     try {
       const sealed = await sealData(
         { key, session },
-        { password: SECRET, ttl: 60 * 60 * 24 * 60 },
+        { password, ttl: 60 * 60 * 24 * 60 },
       );
       await writeChunked("plrd_oauth_sess", sealed, 60 * 60 * 24 * 60);
     } catch {
@@ -108,7 +108,7 @@ export const cookieSessionStore: NodeSavedSessionStore = {
     if (!raw) return undefined;
     try {
       const data = await unsealData<{ key: string; session: NodeSavedSession }>(raw, {
-        password: SECRET,
+        password: getSessionSecret(),
       });
       return data.key === key ? data.session : undefined;
     } catch {
