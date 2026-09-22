@@ -1,6 +1,6 @@
 import WebSocket from "ws";
 import { db, tables } from "@/lib/db";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { indexRecord, deleteRecord } from "./index";
 import {
   DOCUMENT_NSID,
@@ -28,15 +28,28 @@ const COLLECTIONS = [
 ];
 
 /**
- * The site.standard.* firehose is dominated by RSS-bridge services
- * (news mirrors, image boards, *.web.brid.gy) that mass-publish
- * site.standard.document records. Gate those collections to actors the
- * index already knows — anyone who has posted/commented/voted via the
- * quiet pub.leaflet.* lexicons or was explicitly backfilled (profile
- * visit, post visit, /api/backfill). The backfill paths call
- * indexRecord directly, so new genuine authors still get in.
+ * Firehose admission policy. The public firehose for both the site.standard.*
+ * and pub.leaflet.* collections is dominated by RSS bridges, SEO spam, and
+ * test posts, so live events only grow the index outward from what it
+ * already knows:
+ *
+ * - documents and publications are accepted from known actors only
+ *   (anyone with an indexed post, comment, vote, or publication);
+ * - comments and recommends are accepted only when their subject post is
+ *   already indexed, which is also how a new actor becomes known;
+ * - subscriptions are accepted only for indexed publications.
+ *
+ * Explicit entry paths (SEED_ACTORS, /api/backfill, profile and post visits,
+ * and the authoring endpoints) call indexRecord directly and bypass this
+ * gate, so genuine new authors still get in.
  */
-const GATED_COLLECTIONS = new Set([SITE_DOCUMENT_NSID, SITE_PUBLICATION_NSID]);
+const ACTOR_GATED = new Set([
+  DOCUMENT_NSID,
+  PUBLICATION_NSID,
+  SITE_DOCUMENT_NSID,
+  SITE_PUBLICATION_NSID,
+]);
+const SUBJECT_GATED = new Set([COMMENT_NSID, RECOMMEND_NSID, SITE_RECOMMEND_NSID]);
 
 function isKnownActor(did: string): boolean {
   return !!(
@@ -45,6 +58,41 @@ function isKnownActor(did: string): boolean {
     db.select({ did: tables.votes.did }).from(tables.votes).where(eq(tables.votes.did, did)).get() ??
     db.select({ did: tables.publications.did }).from(tables.publications).where(eq(tables.publications.did, did)).get()
   );
+}
+
+function parseAtUri(uri: unknown): { did: string; rkey: string } | null {
+  if (typeof uri !== "string") return null;
+  const m = /^at:\/\/([^/]+)\/[^/]+\/([^/]+)$/.exec(uri);
+  return m ? { did: m[1], rkey: m[2] } : null;
+}
+
+/** Post lookup by DID + rkey so legacy and standard.site URIs both match. */
+function isIndexedPost(uri: unknown): boolean {
+  const ref = parseAtUri(uri);
+  if (!ref) return false;
+  return !!db
+    .select({ uri: tables.posts.uri })
+    .from(tables.posts)
+    .where(and(eq(tables.posts.did, ref.did), eq(tables.posts.rkey, ref.rkey)))
+    .get();
+}
+
+function isIndexedPublication(uri: unknown): boolean {
+  const ref = parseAtUri(uri);
+  if (!ref) return false;
+  return !!db
+    .select({ uri: tables.publications.uri })
+    .from(tables.publications)
+    .where(and(eq(tables.publications.did, ref.did), eq(tables.publications.rkey, ref.rkey)))
+    .get();
+}
+
+function admit(did: string, collection: string, record: unknown): boolean {
+  if (ACTOR_GATED.has(collection)) return isKnownActor(did);
+  const r = record as { subject?: unknown; document?: unknown; publication?: unknown } | null;
+  if (SUBJECT_GATED.has(collection)) return isIndexedPost(r?.subject ?? r?.document);
+  if (collection === SITE_SUBSCRIPTION_NSID) return isIndexedPublication(r?.publication);
+  return true;
 }
 
 type JetstreamEvent = {
@@ -102,7 +150,7 @@ function connect() {
       if (operation === "delete") {
         deleteRecord(evt.did, collection, rkey);
       } else {
-        if (GATED_COLLECTIONS.has(collection) && !isKnownActor(evt.did)) return;
+        if (!admit(evt.did, collection, record)) return;
         indexRecord(evt.did, collection, rkey, record);
       }
 

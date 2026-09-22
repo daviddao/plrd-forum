@@ -77,11 +77,13 @@ export function TableOfContents({
   }, [sections]);
 
   useEffect(() => {
-    measure();
-    // re-measure once images settle (FM waits for post images to load)
+    // measure after first paint so offsets reflect the laid-out post body,
+    // then re-measure once images settle (FM waits for post images to load)
+    const raf = requestAnimationFrame(measure);
     const t = setTimeout(measure, 1500);
     window.addEventListener("resize", measure);
     return () => {
+      cancelAnimationFrame(raf);
       clearTimeout(t);
       window.removeEventListener("resize", measure);
     };

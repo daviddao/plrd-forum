@@ -1,9 +1,9 @@
 import Link from "next/link";
+import { SITE_NAME } from "@/lib/site";
 
 export const metadata = {
   title: "Docs",
-  description:
-    "Developer and agent resources for PLRD Forum: markdown content negotiation, HTTP API, OpenAPI spec, MCP server, llms.txt.",
+  description: `Developer and agent resources for ${SITE_NAME}: markdown content negotiation, HTTP API, OpenAPI spec, MCP server, llms.txt.`,
 };
 
 const endpoints: { method: string; path: string; desc: string }[] = [
@@ -35,7 +35,7 @@ const endpoints: { method: string; path: string; desc: string }[] = [
   {
     method: "POST",
     path: "/api/v1/votes",
-    desc: "Recommend a post — karma equals recommend count (OAuth session).",
+    desc: "Recommend a post. Karma equals the recommend count (OAuth session).",
   },
   {
     method: "POST",
@@ -47,10 +47,10 @@ const endpoints: { method: string; path: string; desc: string }[] = [
 export default function DocsPage() {
   return (
     <div className="lw-card mt-8 px-8 py-10">
-      <h1 className="serif-title pb-1 text-[26px]">PLRD Forum developer docs</h1>
+      <h1 className="serif-title pb-1 text-[26px]">{SITE_NAME} developer docs</h1>
       <div className="post-body">
         <p>
-          PLRD Forum is built on ATProto and the open{" "}
+          {SITE_NAME} is built on ATProto and the open{" "}
           <code>site.standard.*</code> lexicons, so most of it is already
           machine-readable. Everything below requires no API key.
         </p>
@@ -105,7 +105,7 @@ export default function DocsPage() {
             <code>site.standard.graph.subscription</code>{" "}
             (published by leaflet.pub; legacy <code>pub.leaflet.*</code> still indexed)
           </li>
-          <li>Source &amp; issues: the forum is a Next.js app porting LessWrong's design</li>
+          <li>Source &amp; issues: the forum is a Next.js app porting LessWrong’s design</li>
         </ul>
       </div>
     </div>

@@ -1,4 +1,4 @@
-# Working on PLRD Forum
+# Working on Open Lab
 
 Instructions for coding agents. Start with [README.md](README.md) for the product, setup, and deployment constraints.
 
@@ -41,23 +41,23 @@ Backfill indexes existing records. Never republish an imported article just to r
 
 ## Design rules
 
-**Port LessWrong styles from ForumMagnum source. Do not eyeball them.**
+**Two sources of truth. Port from them; do not eyeball.**
 
-1. Find the matching component in [ForumMagnum](https://github.com/ForumMagnum/ForumMagnum), usually under `packages/lesswrong/components/`.
-2. Read its `defineStyles` values and supporting theme definitions.
-3. Port the values and annotate CSS with the source filename. Keep upstream attribution.
-
-Reference files include `lesswrongTheme.ts`, `defaultPalette.ts`, `stylePiping.ts`, `LWPostsItem.tsx`, `FixedPositionToC.tsx`, and `LoginForm.tsx`.
+- **Layout and reading metrics** come from [ForumMagnum](https://github.com/ForumMagnum/ForumMagnum), usually under `packages/lesswrong/components/`. Read the `defineStyles` values, port them, and annotate CSS with the source filename. Reference files include `lesswrongTheme.ts`, `defaultPalette.ts`, `stylePiping.ts`, `LWPostsItem.tsx`, and `FixedPositionToC.tsx`.
+- **Colour, type, buttons, and the sign-in screen** come from the Open Lab design at `https://open-lab-two.vercel.app/lab/`. Pull its compiled CSS (`.open-lab`, `.lab-login*`, `.lab-button*`, `.lab-header*`) and port the values. The `--lab-*` tokens in `globals.css` are that palette; the `--lw-*` names are kept as aliases so ForumMagnum-derived rules keep working.
 
 | Element | Existing convention |
 | --- | --- |
-| Palette | Background `#f8f4ee`, primary `#5f9b65`, links `#327e09`, MUI grey scale |
-| UI font | Calibri/Gill Sans stack; base UI size 15.08px |
-| Post text | Warnock Pro/Palatino stack, 18.2px with 26px leading |
-| Headings | ETBookRoman, loaded from the Tufte CSS CDN |
+| Palette | Paper `#f8f7f3`, card `#fdfcf9`, ink `#17191a`, muted `#626660`, line `#d9dcd5`, blue `#0969ce`, soft `#eaf1f6` |
+| Dark palette | Paper `#161a1c`, card `#1d2225`, ink `#eeeee5`, muted `#b0b8b5`, line `#394348`, blue `#83bdff`, soft `#25343e`, toggled through `.dark` |
+| UI font | Aileron (bundled in `public/fonts/`); base UI size 15.08px |
+| Headings | Newsreader via `next/font/google`, exposed as `--font-newsreader` |
+| Post text | Warnock Pro when Typekit is configured, otherwise Newsreader; 18.2px with 26px leading |
 | Adobe fonts | Optional `NEXT_PUBLIC_TYPEKIT_ID`; do not bundle commercial fonts |
-| Dark mode | HSL-lightness inversion of the light palette, toggled through `.dark` |
-| Post rows | White background, 2px separator, 16.9px serif titles, 14.3px metadata |
+| Cards | Hairline `--lab-line` border, 4px radius, no drop shadow |
+| Post rows | Card background, 1px line separator, 16.9px serif titles, 14.3px metadata |
+| Sign-in | `/login` renders outside the shell; `.lab-login` is a 1:1 port with its own `--login-*` tokens |
+| Brand | `src/lib/site.ts` holds the name, organisation, URLs, and taglines. Never hardcode "Open Lab" in a page |
 
 Keep the background static. Walking sim avatars were removed because they distracted from reading. Preserve the separate Einstein feedback widget unless its removal is requested.
 
@@ -65,7 +65,13 @@ Keep the background static. Walking sim avatars were removed because they distra
 
 | Path | Responsibility |
 | --- | --- |
-| `src/app/` | Pages, OAuth routes, JSON API, and discovery endpoints |
+| `src/app/layout.tsx` | Root layout: fonts, theme bootstrap, metadata. No chrome |
+| `src/app/(shell)/` | Every page that gets the header, nav rail, and Einstein widget via `AppShell` |
+| `src/app/login/` | Standalone sign-in screen outside the shell |
+| `src/app/not-found.tsx` | Root 404 for unmatched URLs; wraps `NotFoundContent` in `AppShell` itself |
+| `src/app/api/`, `src/app/oauth/` | JSON API, discovery endpoints, and OAuth routes |
+| `src/proxy.ts` | Rate-limit headers for `/api`, markdown content negotiation, `Vary: Accept` (Next 16 proxy, formerly middleware) |
+| `src/lib/site.ts` | Site name, organisation, URLs, taglines |
 | `src/components/` | ForumMagnum-derived UI, editor, tooltips, and navigation |
 | `src/lib/auth/client.ts` | Shared ATProto `NodeOAuthClient` and provider-host corrections |
 | `src/lib/auth/secret.ts` | Required session-encryption secret; no default |
@@ -129,12 +135,13 @@ Rules to preserve:
 - **Link previews:** external hosts may block image embedding or return dead URLs. Hide failed images and retain the text card. Do not proxy arbitrary URLs without an SSRF review.
 - **Reaction icons:** black SVGs need inversion in dark mode and on the dark selection toolbar.
 - **Navigation:** post pages use the reading rail instead of the main sidebar. Preserve mobile menu behavior.
+- **Layered CSS:** Tailwind utilities live in `@layer utilities`; the hand-written rules in `globals.css` are unlayered and win regardless of specificity. Never set `display` in a component class that also needs responsive `hidden sm:flex` utilities.
 
 ## Ingestion and deployment constraints
 
 - The `better-sqlite3` connection is cached on `globalThis`. Restart the dev server after schema changes; hot reload may skip new bootstrap DDL.
 - Keep `allowedDevOrigins: ["127.0.0.1"]` in `next.config.ts` so development chunks hydrate correctly.
-- Jetstream gates `site.standard.*` events to known authors. Do not remove this spam control without a replacement. Explicit backfill, profile visits, and post visits are the entry paths for new authors.
+- Jetstream admits live events only when they extend what the index already knows: documents and publications from known actors, comments and recommends whose subject post is indexed, subscriptions to indexed publications. Both `pub.leaflet.*` and `site.standard.*` are covered. Do not loosen this without a replacement; the public firehose is mostly RSS bridges, SEO spam, and test posts. Explicit backfill, `SEED_ACTORS`, profile visits, post visits, and the authoring endpoints are the entry paths for new authors.
 - `SEED_ACTORS` is a comma-separated list. Startup awaits seeding before accepting requests when the index is empty. Fire-and-forget seeding can be suspended on Vercel before it completes.
 - Vercel uses ephemeral `/tmp` storage. It is suitable for the demo, not a durable SQLite index or persistent Jetstream worker. Local feedback needs persistent hosting if it must survive restarts.
 - The optional Actions deploy job needs all three repository secrets: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID`. Without them it skips deployment. Do not copy credentials between repositories.

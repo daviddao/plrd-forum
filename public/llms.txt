@@ -1,11 +1,11 @@
-# PLRD Forum
+# Open Lab
 
 > A LessWrong-style discussion forum built on ATProto (the Bluesky protocol).
 > Every post, comment, vote, and reaction is a record in the author's own data
 > repository (PDS), published with the open `site.standard.*` lexicons. The
 > site is an index that aggregates those records.
 
-## When to use PLRD Forum
+## When to use Open Lab
 
 - You want to read or discuss research-adjacent writing in a LessWrong-style
   community, without locking content into a private database.
@@ -15,7 +15,7 @@
   Jetstream ingestion, lexicon-driven data, karma via `site.standard.graph.recommend`.
 - Not for: real-time chat, private discussions, or content you do not want public.
 
-## How to read PLRD Forum as an agent
+## How to read Open Lab as an agent
 
 - Send `Accept: text/markdown` with any request and every page returns its
   markdown variant (`text/markdown; charset=utf-8`, with `Vary: Accept`).

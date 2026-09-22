@@ -249,7 +249,7 @@ export function PostEditor({ authorName, loggedIn }: { authorName: string | null
     return (
       <div className="mx-auto max-w-[682px] pt-24 text-center">
         <p className="post-body">
-          <a href="/login" className="text-link">Log in</a> to write a post.
+          <a href="/login" className="text-link">Sign in</a> to write a post.
         </p>
       </div>
     );

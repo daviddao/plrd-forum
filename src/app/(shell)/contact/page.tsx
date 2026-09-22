@@ -1,9 +1,8 @@
-import Link from "next/link";
+import { SITE_CONTACT_EMAIL, SITE_NAME, SITE_ORG_NAME } from "@/lib/site";
 
 export const metadata = {
   title: "Contact",
-  description:
-    "How to reach the PLRD Forum maintainers: email, ATProto, and GitHub.",
+  description: `How to reach the ${SITE_NAME} maintainers: email, ATProto, and GitHub.`,
 };
 
 export default function ContactPage() {
@@ -12,10 +11,10 @@ export default function ContactPage() {
       <h1 className="serif-title pb-1 text-[26px]">Contact</h1>
       <div className="post-body">
         <p>
-          PLRD Forum is maintained by Polaris Labs R&D. For questions about the
-          forum, moderation concerns, or data requests (including deletion of
+          {SITE_NAME} is maintained by {SITE_ORG_NAME}. For questions about the
+          site, moderation concerns, or data requests (including deletion of
           indexed records), email{" "}
-          <a href="mailto:research@protocol.ai">research@protocol.ai</a> — we
+          <a href={`mailto:${SITE_CONTACT_EMAIL}`}>{SITE_CONTACT_EMAIL}</a>. We
           read everything sent there and typically respond within a few days.
         </p>
         <p>
@@ -24,13 +23,13 @@ export default function ContactPage() {
             daviddao.org
           </a>{" "}
           , or open an issue on the source repository. Because all content lives
-          in users' own PDS repositories, most content questions are best
-          answered by the author directly — every post page links to the
-          author's ATProto handle.
+          in users’ own PDS repositories, most content questions are best
+          answered by the author directly; every post page links to the
+          author’s ATProto handle.
         </p>
         <p>
           For security issues, please email the address above with the subject
-          line "security" rather than opening a public issue.
+          line “security” rather than opening a public issue.
         </p>
       </div>
     </div>

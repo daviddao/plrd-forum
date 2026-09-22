@@ -4,6 +4,8 @@
  * extract og:/twitter:/plain metadata for the preview card.
  */
 
+import { SITE_SLUG } from "@/lib/site";
+
 export type WebsitePreviewData = {
   kind: "website";
   url: string;
@@ -78,7 +80,7 @@ export async function fetchWebsitePreview(
       signal: AbortSignal.timeout(5000),
       headers: {
         accept: "text/html,application/xhtml+xml",
-        "user-agent": "Mozilla/5.0 (compatible; plrd-forum-link-preview/1.0)",
+        "user-agent": `Mozilla/5.0 (compatible; ${SITE_SLUG}-link-preview/1.0)`,
       },
       next: { revalidate: 3600 },
     });

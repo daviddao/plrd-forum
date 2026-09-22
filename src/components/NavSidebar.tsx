@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNav } from "./nav-context";
 import { compassIcon } from "./icons/compassIcon";
 import { allPostsIcon } from "./icons/allPostsIcon";
@@ -49,7 +49,9 @@ export function NavSidebar() {
 
 /**
  * Minimal port of MUI's temporary Drawer as used by NavigationDrawer.tsx:
- * Slide transition with theme.transitions timings + backdrop fade.
+ * Slide transition with theme.transitions timings + backdrop fade. The
+ * drawer stays mounted; CSS handles enter/leave and hides it from hit
+ * testing and the tab order while closed (see `.drawer-root`).
  */
 function Drawer({
   open,
@@ -60,27 +62,9 @@ function Drawer({
   onClose: () => void;
   children: React.ReactNode;
 }) {
-  const [mounted, setMounted] = useState(open);
-  const [shown, setShown] = useState(false);
-
-  useEffect(() => {
-    if (open) {
-      setMounted(true);
-      // double rAF so the closed position paints before the transition starts
-      const raf = requestAnimationFrame(() =>
-        requestAnimationFrame(() => setShown(true)),
-      );
-      return () => cancelAnimationFrame(raf);
-    } else {
-      setShown(false);
-      const t = setTimeout(() => setMounted(false), 195); // leavingScreen
-      return () => clearTimeout(t);
-    }
-  }, [open]);
-
   // close on Escape, lock body scroll while open
   useEffect(() => {
-    if (!mounted) return;
+    if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     document.addEventListener("keydown", onKey);
     const prevOverflow = document.body.style.overflow;
@@ -89,18 +73,12 @@ function Drawer({
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prevOverflow;
     };
-  }, [mounted, onClose]);
-
-  if (!mounted) return null;
+  }, [open, onClose]);
 
   return (
-    <div className="fixed inset-0 z-[1300]">
-      <div
-        className={`drawer-backdrop ${shown ? "drawer-open" : ""}`}
-        onClick={onClose}
-        aria-hidden="true"
-      />
-      <nav className={`drawer-paper ${shown ? "drawer-open" : ""}`}>{children}</nav>
+    <div className={`drawer-root ${open ? "drawer-open" : ""}`} aria-hidden={!open}>
+      <div className="drawer-backdrop" onClick={onClose} />
+      <nav className="drawer-paper">{children}</nav>
     </div>
   );
 }

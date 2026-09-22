@@ -1,10 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getFrontpagePosts } from "@/lib/queries";
-
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL ??
-  (process.env.PUBLIC_URL?.startsWith("https") ? process.env.PUBLIC_URL : undefined) ??
-  "https://plrd-forum.vercel.app";
+import { SITE_URL } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 

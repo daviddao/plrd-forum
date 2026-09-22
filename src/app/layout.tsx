@@ -1,30 +1,40 @@
 import type { Metadata } from "next";
+import { Newsreader } from "next/font/google";
 import "./globals.css";
-import { Header } from "@/components/Header";
-import { NavSidebar, NavBalance } from "@/components/NavSidebar";
-import { NavProvider } from "@/components/nav-context";
-import { FloatingEinstein } from "@/components/FloatingEinstein";
+import {
+  SITE_NAME,
+  SITE_ORG,
+  SITE_ORG_NAME,
+  SITE_ORG_URL,
+  SITE_CONTACT_EMAIL,
+  SITE_TAGLINE,
+  SITE_TAGLINE_SHORT,
+  SITE_URL,
+} from "@/lib/site";
 
-const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME ?? "Forum";
-const BRAND = "PLRD Forum";
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL ??
-  (process.env.PUBLIC_URL?.startsWith("https") ? process.env.PUBLIC_URL : undefined) ??
-  "https://plrd-forum.vercel.app";
+/* Display serif from the Open Lab design (open-lab-two.vercel.app), self-hosted
+ * at build time by next/font so no runtime font CDN is contacted. Aileron, the
+ * UI sans, is bundled under public/fonts and declared in globals.css. */
+const newsreader = Newsreader({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  style: ["normal", "italic"],
+  display: "swap",
+  variable: "--font-newsreader",
+  fallback: ["Georgia", "Times New Roman", "serif"],
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: { default: BRAND, template: `%s — ${BRAND}` },
-  description:
-    "PLRD Forum is a LessWrong-style discussion forum built on ATProto and the standard.site lexicons. Every post, comment, vote, and reaction is a record in the reader's own data repository.",
+  title: { default: SITE_NAME, template: `%s · ${SITE_NAME}` },
+  description: SITE_TAGLINE,
   alternates: { canonical: "/" },
   openGraph: {
     type: "website",
     url: "/",
-    siteName: BRAND,
-    title: BRAND,
-    description:
-      "A LessWrong-style forum built on ATProto — posts, comments, votes, and reactions live in your own PDS.",
+    siteName: SITE_NAME,
+    title: SITE_NAME,
+    description: SITE_TAGLINE_SHORT,
   },
 };
 
@@ -34,24 +44,22 @@ const jsonLd = [
   {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    name: BRAND,
-    alternateName: `${process.env.NEXT_PUBLIC_SITE_NAME ?? "Forum"} · PL R&D Forum`,
+    name: SITE_NAME,
+    alternateName: `${SITE_NAME} by ${SITE_ORG}`,
     url: SITE_URL,
-    description:
-      "A LessWrong-style discussion forum built on ATProto and the standard.site lexicons.",
+    description: SITE_TAGLINE_SHORT,
     inLanguage: "en",
   },
   {
     "@context": "https://schema.org",
     "@type": "Organization",
-    name: "Polaris Labs R&D",
-    url: "https://www.plrd.org",
-    description:
-      "Research group behind PLRD Forum, an ATProto-native discussion platform.",
+    name: SITE_ORG_NAME,
+    url: SITE_ORG_URL,
+    description: `Research group behind ${SITE_NAME}, an ATProto-native discussion platform.`,
     contactPoint: [
       {
         "@type": "ContactPoint",
-        email: "research@protocol.ai",
+        email: SITE_CONTACT_EMAIL,
         contactType: "customer support",
       },
     ],
@@ -75,14 +83,14 @@ try {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className={newsreader.variable}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInit }} />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
-        {/* warnock-pro / gill-sans-nova via Adobe Fonts, if configured */}
+        {/* warnock-pro via Adobe Fonts for post bodies, if configured */}
         {process.env.NEXT_PUBLIC_TYPEKIT_ID && (
           <link
             rel="stylesheet"
@@ -90,20 +98,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           />
         )}
       </head>
-      <body className="min-h-screen bg-bg text-text antialiased">
-        <NavProvider>
-          <Header />
-          <div className="flex">
-            <NavSidebar />
-            <main className="mx-auto w-full max-w-[765px] px-2 pb-24 sm:px-4">
-              {children}
-            </main>
-            {/* balance the sidebar so the column stays centered, like LW */}
-            <NavBalance />
-          </div>
-          <FloatingEinstein />
-        </NavProvider>
-      </body>
+      <body className="min-h-screen bg-bg text-text antialiased">{children}</body>
     </html>
   );
 }

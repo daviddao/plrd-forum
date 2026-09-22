@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { PostListItem } from "@/lib/queries";
-import { timeAgo, fullDateTime, authorName, readingTime } from "@/lib/format";
+import { timeAgo, fullDateTime, authorName } from "@/lib/format";
 import { Tooltip } from "./Tooltip";
 import { UserTooltip } from "./UserTooltip";
 import { PostPreview } from "./PostPreview";

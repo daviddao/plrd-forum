@@ -1,5 +1,6 @@
 import { NodeOAuthClient } from "@atproto/oauth-client-node";
 import { cookieStateStore, cookieSessionStore } from "./cookie-stores";
+import { SITE_NAME } from "@/lib/site";
 
 export const SCOPE = "atproto transition:generic";
 
@@ -25,7 +26,7 @@ export function getOAuthClient(): NodeOAuthClient {
         client_id: `http://localhost?redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(SCOPE)}`,
         redirect_uris: [redirectUri] as [string],
         scope: SCOPE,
-        client_name: "PLRD Forum (dev)",
+        client_name: `${SITE_NAME} (dev)`,
         token_endpoint_auth_method: "none" as const,
         response_types: ["code"] as ["code"],
         grant_types: ["authorization_code", "refresh_token"] as ["authorization_code", "refresh_token"],
@@ -36,7 +37,7 @@ export function getOAuthClient(): NodeOAuthClient {
         client_id: `${base}/client-metadata.json`,
         redirect_uris: [redirectUri] as [string],
         scope: SCOPE,
-        client_name: "PLRD Forum",
+        client_name: SITE_NAME,
         client_uri: base,
         token_endpoint_auth_method: "none" as const,
         response_types: ["code"] as ["code"],

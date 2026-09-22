@@ -1,20 +1,26 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
+
+/* The `<html class="dark">` flag is the source of truth (set by the inline
+ * theme script before hydration). Subscribe to it instead of mirroring it
+ * into state from an effect, so the first client render is already correct. */
+function subscribe(onChange: () => void) {
+  const observer = new MutationObserver(onChange);
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+  return () => observer.disconnect();
+}
+const getSnapshot = () => document.documentElement.classList.contains("dark");
+const getServerSnapshot = () => null;
 
 export function ThemeToggle() {
-  const [dark, setDark] = useState<boolean | null>(null);
+  const dark = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
-  useEffect(() => {
-    setDark(document.documentElement.classList.contains("dark"));
-  }, []);
-
-  const toggle = useCallback(() => {
+  const toggle = () => {
     const next = !document.documentElement.classList.contains("dark");
     document.documentElement.classList.toggle("dark", next);
     localStorage.setItem("theme", next ? "dark" : "light");
-    setDark(next);
-  }, []);
+  };
 
   return (
     <button

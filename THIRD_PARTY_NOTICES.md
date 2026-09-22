@@ -10,13 +10,19 @@ The `public/reactionImages/` collection comes from ForumMagnum and includes artw
 
 ## Typography
 
-[ET Book](https://github.com/edwardtufte/et-book) is loaded through the [Tufte CSS](https://github.com/edwardtufte/tufte-css) CDN paths referenced in `src/app/globals.css`. Font files are not vendored here.
+[Aileron](https://github.com/sorasagano/aileron) by Sora Sagano is released under CC0 1.0. The four faces used by the Open Lab design (Regular, Italic, SemiBold, Bold) are vendored as WOFF2 under `public/fonts/`.
 
-Warnock Pro and Gill Sans Nova are optional Adobe Fonts integrations. Supply your own authorized kit through `NEXT_PUBLIC_TYPEKIT_ID`; the application otherwise uses its fallback font stacks.
+[Newsreader](https://github.com/productiontype/Newsreader) by Production Type is released under the SIL Open Font License 1.1. It is fetched from Google Fonts at build time by `next/font` and served from this application; no runtime request goes to Google.
+
+Warnock Pro is an optional Adobe Fonts integration for post bodies. Supply your own authorized kit through `NEXT_PUBLIC_TYPEKIT_ID`; the application otherwise uses Newsreader.
+
+## Design
+
+The colour tokens, sign-in card, and brand lockup are ported from the Open Lab design at open-lab-two.vercel.app (PL R&D). The reading layout, post list, comments, and table of contents remain ForumMagnum ports.
 
 ## Other assets and integrations
 
-- Protocol Labs branding identifies the hosted PL R&D forum. It is not a grant to use Protocol Labs trademarks for another service.
+- Protocol Labs branding identifies the hosted PL R&D site. It is not a grant to use Protocol Labs trademarks for another service.
 - The bundled Einstein feedback sprite and its rendering approach come from the Simocracy integration. Artwork and branding retain their owners' rights.
 - Leaflet and standard.site supply the content formats used for interoperability. ATProto supplies the identity, repository, and OAuth protocols.
 - npm dependencies retain their own licenses. Their resolved versions are recorded in `package-lock.json`.

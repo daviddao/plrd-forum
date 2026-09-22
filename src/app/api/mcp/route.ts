@@ -3,6 +3,7 @@ import { getFrontpagePosts, getPost } from "@/lib/queries";
 import { db, tables } from "@/lib/db";
 import { documentToMarkdown, postHref } from "@/lib/markdown";
 import type { LeafletDocument } from "@/lib/leaflet/types";
+import { SITE_NAME, SITE_SLUG, SITE_URL } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
@@ -15,13 +16,13 @@ export const dynamic = "force-dynamic";
 const PROTOCOL_VERSION = "2025-06-18";
 
 const SERVER_INFO = {
-  name: "plrd-forum",
-  title: "PLRD Forum",
+  name: SITE_SLUG,
+  title: SITE_NAME,
   version: "1.0.0",
 };
 
 const INSTRUCTIONS =
-  "Read-only MCP server for PLRD Forum, a LessWrong-style ATProto forum. " +
+  `Read-only MCP server for ${SITE_NAME}, a LessWrong-style ATProto forum. ` +
   "Use get_frontpage to list recent posts with karma and URLs, get_post to " +
   "read a full post as markdown (did + rkey come from /posts/<did>/<rkey> " +
   "URLs), and list_concepts to enumerate tags.";
@@ -30,7 +31,7 @@ const TOOLS = [
   {
     name: "get_frontpage",
     description:
-      "List the latest posts on PLRD Forum (a LessWrong-style ATProto forum), ranked by recency with karma and comment counts.",
+      `List the latest posts on ${SITE_NAME} (a LessWrong-style ATProto forum), ranked by recency with karma and comment counts.`,
     inputSchema: {
       type: "object",
       properties: {
@@ -44,7 +45,7 @@ const TOOLS = [
   {
     name: "get_post",
     description:
-      "Fetch a single PLRD Forum post's full text as markdown, given the author DID and record key (from a /posts/<did>/<rkey> URL).",
+      `Fetch a single ${SITE_NAME} post's full text as markdown, given the author DID and record key (from a /posts/<did>/<rkey> URL).`,
     inputSchema: {
       type: "object",
       properties: {
@@ -56,15 +57,10 @@ const TOOLS = [
   },
   {
     name: "list_concepts",
-    description: "List the tags (concepts) used across PLRD Forum posts with post counts.",
+    description: `List the tags (concepts) used across ${SITE_NAME} posts with post counts.`,
     inputSchema: { type: "object", properties: {} },
   },
 ] as const;
-
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL ??
-  (process.env.PUBLIC_URL?.startsWith("https") ? process.env.PUBLIC_URL : undefined) ??
-  "https://plrd-forum.vercel.app";
 
 async function callTool(name: string, args: Record<string, unknown>) {
   if (name === "get_frontpage") {

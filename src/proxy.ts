@@ -36,7 +36,7 @@ function rateLimit(req: NextRequest): { headers: Record<string, string>; limited
   return { headers, limited: entry.count > LIMIT };
 }
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   if (pathname.startsWith("/api")) {

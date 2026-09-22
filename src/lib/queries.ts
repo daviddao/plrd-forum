@@ -57,8 +57,6 @@ export type CommentNode = {
   children: CommentNode[];
 };
 
-const voteCount = (subject: typeof tables.posts.uri) =>
-  sql<number>`(SELECT COUNT(*) FROM votes v WHERE v.subject = ${subject})`;
 
 export async function getFrontpagePosts(limit = 30): Promise<PostListItem[]> {
   const rows = db

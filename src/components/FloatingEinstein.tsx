@@ -15,8 +15,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 
-const SPRITE_W = 64;
-const SPRITE_H = 69; // 192x208 cell → 12:13 footprint
 const SHEET_URL = "/codex-pets/Einstein-sheet.webp";
 const POSTER_URL = "/codex-pets/Einstein.png";
 const OPEN_WAVE_MS = 1600;

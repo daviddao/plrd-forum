@@ -58,7 +58,7 @@ export function CommentForm({
   if (!loggedIn) {
     return (
       <div className="comment-body py-2 text-text-dim3">
-        <a href="/login" className="text-link">Log in</a> to comment.
+        <a href="/login" className="text-link">Sign in</a> to comment.
       </div>
     );
   }

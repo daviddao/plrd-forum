@@ -1,12 +1,12 @@
-# PLRD Forum
+# Open Lab
 
-A research forum with the reading experience of LessWrong and accounts built on ATProto.
+A research forum with the reading experience of LessWrong, the Open Lab visual identity, and accounts built on ATProto.
 
-PLRD Forum is a shared place for PL R&D and its collaborators to publish, discuss, and follow research. Posts and discussions live in their authors' personal data servers. The forum indexes those public records and gives them a familiar reading interface.
+Open Lab (by PL R&D) is a shared place for PL R&D and its collaborators to publish, discuss, and follow research. Posts and discussions live in their authors' personal data servers. The forum indexes those public records and gives them a familiar reading interface.
 
 [Visit the forum](https://plrd-forum.vercel.app) · [Sign in](https://plrd-forum.vercel.app/login) · [API documentation](https://plrd-forum.vercel.app/docs) · [Guide for coding agents](AGENTS.md)
 
-![PLRD Forum showing published research articles, navigation, and the reading interface](docs/assets/forum.webp)
+![Open Lab showing published research articles, navigation, and the reading interface](docs/assets/forum.webp)
 
 ## What you can do
 
@@ -14,7 +14,7 @@ PLRD Forum is a shared place for PL R&D and its collaborators to publish, discus
 - **Sign in with email or an ATProto handle.** Email is the default. Existing Bluesky and other ATProto accounts work through the alternative handle form.
 - **Publish and discuss.** Write rich-text posts, add threaded comments, recommend posts, subscribe to publications, and react to selected passages.
 - **Keep your records.** Publishing writes to your own PDS, the personal data server behind your ATProto account. The forum's database is an index, not the source of your posts.
-- **Read comfortably.** Serif typography, light and dark themes, a reading-progress rail, and author and link previews follow LessWrong's design.
+- **Read comfortably.** Newsreader serif text, Aileron UI type, light and dark themes, a reading-progress rail, and author and link previews. The layout follows LessWrong; the palette and sign-in screen follow the Open Lab design.
 
 The interface is adapted from [ForumMagnum](https://github.com/ForumMagnum/ForumMagnum). This is a separate Next.js application, not a deployment of LessWrong's backend.
 
@@ -57,9 +57,9 @@ The checked-in [`.env.example`](.env.example) contains public defaults and an em
 | `EPDS_URL` | Email sign-in provider. The example uses `https://certified.one`. Without it, handle login still works. |
 | `SEED_ACTORS` | Optional comma-separated public handles or DIDs to index when the database is empty. |
 | `DATABASE_PATH` | SQLite file path. Defaults to `./forum.db`. Use persistent storage outside demo deployments. |
-| `NEXT_PUBLIC_SITE_NAME` | Header label. Defaults to `Forum`. Inlined at build time. |
+| `NEXT_PUBLIC_SITE_NAME` | Site name used in the header, titles, and API descriptions. Defaults to `Open Lab`. Inlined at build time. |
 | `NEXT_PUBLIC_SITE_URL` | Optional canonical origin for metadata, discovery, and sitemaps. |
-| `NEXT_PUBLIC_TYPEKIT_ID` | Optional Adobe Fonts kit. Without it, the serif and sans-serif fallback stacks are used. |
+| `NEXT_PUBLIC_TYPEKIT_ID` | Optional Adobe Fonts kit for Warnock Pro post bodies. Without it, Newsreader is used. |
 | `JETSTREAM_URL` | Optional ATProto event-stream endpoint override. |
 | `OAUTH_AUTHORIZE_REWRITES` | Optional JSON map for known provider authorization-host corrections. Normally leave unset. |
 

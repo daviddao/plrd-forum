@@ -14,7 +14,7 @@ export default async function LibraryPage() {
         <h1>The Library</h1>
       </div>
       <p className="mb-5 max-w-[600px] text-[14.3px] text-text-dim3">
-        Publications from the leaflet network — collections of posts by a
+        Publications from the leaflet network: collections of posts by a
         single author or team, like LessWrong&apos;s sequences.
       </p>
 
