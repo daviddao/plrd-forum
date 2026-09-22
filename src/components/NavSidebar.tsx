@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { useNav } from "./nav-context";
+import { SITE_ORG, SITE_ORG_URL } from "@/lib/site";
 import { compassIcon } from "./icons/compassIcon";
 import { allPostsIcon } from "./icons/allPostsIcon";
 import { conceptsIcon } from "./icons/conceptsIcon";
@@ -124,8 +125,8 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
       <a href="https://atproto.com" target="_blank" rel="noopener noreferrer" className="nav-sub-item no-underline">
         AT Protocol
       </a>
-      <a href="https://www.lesswrong.com" target="_blank" rel="noopener noreferrer" className="nav-sub-item no-underline">
-        Styled after LessWrong
+      <a href={SITE_ORG_URL} target="_blank" rel="noopener noreferrer" className="nav-sub-item no-underline">
+        {SITE_ORG}
       </a>
     </>
   );
